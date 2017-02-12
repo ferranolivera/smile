@@ -36,26 +36,44 @@ set(DEFAULT_DEFINES
 if(UNIX)
   set(LINUX 1)
   set(SO "linux")
-  set(UUID_LIB "uuid")
-  set(RUNTIME_LIB "rt")
-else(WIN32)
-    set(SO "OTHER")
-endif(WIN32)
+else(UNIX)
+  set(SO "OTHER")
+endif(UNIX)
 
 #
 # Set project paths
 #
-set(SMILE_DIR "${SMILE_SOURCE_DIR}/sparksee")
-set(SMILE_INCLUDE_DIR "${SMILE_SOURCE_DIR}/")
+set(SMILE_DIR "${SMILE_SOURCE_DIR}/src")
+set(SMILE_INCLUDE_DIR "${SMILE_DIR}/")
+
+MESSAGE(STATUS ${SMILE_INCLUDE_DIR})
 
 if (UNIX)
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g -gdb -O3 -NDEBUG -fPIC")
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -g -gdb -fPIC")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -gdb -fPIC")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -gdb -O3 -fPIC")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -fPIC -std=c++14")
+    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -fPIC -std=c++14")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -gdb -fPIC -std=c++14")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -gdb -fPIC -std=c++14")
 endif (UNIX)
 
 
+
+#
+# Enabling testing
+#
+add_subdirectory(libs/gtest)
+enable_testing()
+set(GTEST_INCLUDE_DIRS  "${CMAKE_SOURCE_DIR}/tools/gtest/include/")
+set(GTEST_LIBRARIES "gtest")
+add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND})
+add_custom_target(check-io COMMAND ${CMAKE_CTEST_COMMAND} -R "-io")
+
+#
+# Boost
+#
+set(Boost_USE_STATIC_LIBS OFF) 
+set(Boost_USE_MULTITHREADED ON)  
+set(Boost_USE_STATIC_RUNTIME OFF) 
+FIND_PACKAGE(Boost 1.62 COMPONENTS program_options date_time thread system locale REQUIRED)
 
 #
 # Summary messages
