@@ -20,7 +20,7 @@ endif(NOT CMAKE_BUILD_TYPE)
 if(CMAKE_SIZEOF_VOID_P MATCHES "4")
     set(ARCHTYPE "32")
 else(CMAKE_SIZEOF_VOID_P MATCHES "4")
-    set(ARCHTYPE "64")
+    set(ARCHTYPE "64") 
 endif(CMAKE_SIZEOF_VOID_P MATCHES "4")
 
 #
@@ -51,8 +51,8 @@ MESSAGE(STATUS ${SMILE_INCLUDE_DIR})
 if (UNIX)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -fPIC -std=c++14")
     set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -fPIC -std=c++14")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -gdb -fPIC -std=c++14")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -gdb -fPIC -std=c++14")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -ggdb -fPIC -std=c++14")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -ggdb -fPIC -std=c++14")
 endif (UNIX)
 
 
@@ -74,6 +74,14 @@ set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)  
 set(Boost_USE_STATIC_RUNTIME OFF) 
 FIND_PACKAGE(Boost 1.62 COMPONENTS program_options date_time thread system locale REQUIRED)
+
+#
+# Set output folders
+#
+set(SMILE_LIB_OUTPUT_DIR "${CMAKE_BINARY_DIR}/lib")
+set(SMILE_EXEC_OUTPUT_DIR "${CMAKE_BINARY_DIR}/bin")
+set(SMILE_TEST_OUTPUT_DIR "${SMILE_EXEC_OUTPUT_DIR}/test")
+
 
 #
 # Summary messages

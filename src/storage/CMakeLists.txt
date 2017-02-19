@@ -11,7 +11,13 @@ if (UNIX)
 endif (UNIX)
 
 add_library(storage STATIC
-  storage.cpp
+  error.h
+  file_storage.cpp
+  file_storage.h
+  sequential_storage.h
+  types.h
 )
 
 target_link_libraries(storage)
+
+add_subdirectory(tests)

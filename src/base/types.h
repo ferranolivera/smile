@@ -6,6 +6,10 @@
 #include <cstdint>
 
 SMILE_NS_BEGIN
+    /// Unsigned short integer (8 bits)
+    using uint8_t = std::uint8_t;
+    /// Signed short integer (8 bits)
+    using int8_t  = std::int8_t;
     /// Unsigned short integer (16 bits)
     using uint16_t = std::uint16_t;
     /// Signed short integer (16 bits)
