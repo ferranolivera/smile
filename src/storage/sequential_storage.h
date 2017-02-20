@@ -34,7 +34,7 @@ class ISequentialStorage {
      * @param in the path to the storage to create
      * @return in the configuration of the storage
      **/
-    virtual storageError_t create( const std::string& path, const SequentialStorageConfig& config, bool overwrite = false) noexcept = 0;
+    virtual storageError_t create( const std::string& path, const SequentialStorageConfig& config, const bool overwrite = false) noexcept = 0;
 
     /**
      * Closes the storage
@@ -48,7 +48,7 @@ class ISequentialStorage {
      * @param out extentId The first reserved extentId
      * @return false if there was an error. true otherwise
      **/
-    virtual storageError_t reserve( uint32_t numExtents, extentId_t& extents ) noexcept = 0;
+    virtual storageError_t reserve( const uint32_t numExtents, extentId_t& extents ) noexcept = 0;
 
     /**
      * Locks an extent into a buffer
@@ -56,7 +56,7 @@ class ISequentialStorage {
      * @param in extent The extent to lock
      * @return false if the lock was not successful. true otherwise
      * */
-    virtual storageError_t read( char* data, extentId_t extent ) noexcept = 0;
+    virtual storageError_t read( char* data, const extentId_t extent ) noexcept = 0;
 
     /**
      * Unlocks the given extent
@@ -65,7 +65,7 @@ class ISequentialStorage {
      * @param in drity Whether to write the extent to disk or not.
      * @return false if the unlock was unsuccessful. true otherwise.
      **/
-    virtual storageError_t write( char* data, extentId_t extent ) noexcept = 0;
+    virtual storageError_t write( const char* data, const extentId_t extent ) noexcept = 0;
 
 
 

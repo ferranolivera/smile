@@ -10,6 +10,7 @@ SMILE_NS_BEGIN
 
 class FileStorage : public ISequentialStorage {
   public:
+    SMILE_NON_COPYABLE(FileStorage)
 
     FileStorage() noexcept;
 
@@ -17,15 +18,15 @@ class FileStorage : public ISequentialStorage {
 
     storageError_t open( const std::string& path ) noexcept override;
 
-    storageError_t create( const std::string& path, const SequentialStorageConfig& config, bool overwrite = false ) noexcept override;
+    storageError_t create( const std::string& path, const SequentialStorageConfig& config, const bool overwrite = false ) noexcept override;
 
     storageError_t close() noexcept override;
 
-    storageError_t reserve( uint32_t numExtents, extentId_t& extents ) noexcept override;
+    storageError_t reserve( const uint32_t numExtents, extentId_t& extents ) noexcept override;
 
-    storageError_t read( char* data, extentId_t extent ) noexcept override;
+    storageError_t read( char* data, const extentId_t extent ) noexcept override;
 
-    storageError_t write( char* data, extentId_t extent ) noexcept override;
+    storageError_t write( const char* data, const extentId_t extent ) noexcept override;
 
     uint64_t size() const noexcept override;
 
@@ -53,7 +54,7 @@ class FileStorage : public ISequentialStorage {
      * @param in extentId The extent to convert
      * @return the position in bytes equivalent to the extent.
      */
-    uint64_t extentToBytes( extentId_t extent ) const noexcept;
+    uint64_t extentToBytes( const extentId_t extent ) const noexcept;
 
 
     // The file

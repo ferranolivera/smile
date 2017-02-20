@@ -5,7 +5,6 @@
 SMILE_NS_BEGIN
 
 
-
 FileStorage::FileStorage() noexcept : 
   m_flags( std::ios_base::in | std::ios_base::out | std::ios_base::binary  )
 {
@@ -28,7 +27,7 @@ storageError_t FileStorage::open( const std::string& path ) noexcept {
   return storageError_t::E_NO_ERROR;
 }
 
-storageError_t FileStorage::create( const std::string& path, const SequentialStorageConfig& config, bool overwrite ) noexcept {
+storageError_t FileStorage::create( const std::string& path, const SequentialStorageConfig& config, const bool overwrite ) noexcept {
   if(!overwrite && std::ifstream(path)) {
     return storageError_t::E_PATH_ALREADY_EXISTS;
   }
@@ -58,7 +57,7 @@ storageError_t FileStorage::close() noexcept {
   return storageError_t::E_STORAGE_NOT_OPEN;
 }
 
-storageError_t FileStorage::reserve( uint32_t numExtents, extentId_t& extent ) noexcept {
+storageError_t FileStorage::reserve( const uint32_t numExtents, extentId_t& extent ) noexcept {
   m_file.seekp(0,std::ios_base::end);
   if(!m_file) {
     return storageError_t::E_CRITICAL_ERROR;
@@ -73,7 +72,7 @@ storageError_t FileStorage::reserve( uint32_t numExtents, extentId_t& extent ) n
   return storageError_t::E_NO_ERROR;
 }
 
-storageError_t FileStorage::read( char* data, extentId_t extent ) noexcept {
+storageError_t FileStorage::read( char* data, const extentId_t extent ) noexcept {
   if(extent == 0 || extent >= m_size) {
     return storageError_t::E_OUT_OF_BOUNDS_EXTENT;
   }
@@ -88,7 +87,7 @@ storageError_t FileStorage::read( char* data, extentId_t extent ) noexcept {
   return storageError_t::E_NO_ERROR;
 }
 
-storageError_t FileStorage::write( char* data, extentId_t extent ) noexcept {
+storageError_t FileStorage::write( const char* data, const extentId_t extent ) noexcept {
   if(extent == 0 || extent >= m_size) {
     return storageError_t::E_OUT_OF_BOUNDS_EXTENT;
   }
@@ -116,11 +115,11 @@ uint32_t FileStorage::getExtentSize() const noexcept {
   return m_config.m_extentSizeKB*1024;
 }
 
-extentId_t FileStorage::bytesToExtent( uint64_t bytes ) const noexcept {
+extentId_t FileStorage::bytesToExtent( const uint64_t bytes ) const noexcept {
   return bytes / getExtentSize();
 }
 
-uint64_t FileStorage::extentToBytes( extentId_t extent ) const noexcept {
+uint64_t FileStorage::extentToBytes( const extentId_t extent ) const noexcept {
   return extent * getExtentSize();
 }
 
