@@ -4,7 +4,7 @@
 #ifndef _SMILE_MEMORY_TYPES_H_
 #define _SMILE_MEMORY_TYPES_H_
 
-#include "base/platform.h"
+#include <base/platform.h>
 
 SMILE_NS_BEGIN
 

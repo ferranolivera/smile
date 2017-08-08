@@ -4,7 +4,9 @@
 #ifndef _SMILE_MEMORY_BUFFER_H_
 #define _SMILE_MEMORY_BUFFER_H_ 
 
-#include "memory/types.h"
+#include <memory/types.h>
+
+SMILE_NS_BEGIN
 
 class BufferPool;
 
@@ -24,5 +26,7 @@ class Buffer {
     transactionId_t m_tId;
     // falta punter a la estructura interna de la buffer pool
 };
+
+SMILE_NS_END
 
 #endif /* ifndef _SMILE_MEMORY_BUFFER_H_ */

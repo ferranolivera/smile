@@ -1,7 +1,7 @@
 
 
 
-#include "memory/buffer.cpp"
+#include <memory/buffer.h>
 
 SMILE_NS_BEGIN
 

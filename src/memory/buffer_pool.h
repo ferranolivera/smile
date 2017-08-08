@@ -4,9 +4,10 @@
 #ifndef _MEMORY_BUFFER_POOL_H_
 #define _MEMORY_BUFFER_POOL_H_
 
-#include "base/platform.h"
-#include "memory/types.h"
-#include "storage/file_storage.h"
+#include <base/platform.h>
+#include <memory/types.h>
+#include <memory/buffer.h>
+#include <storage/file_storage.h>
 #include <memory>
 
 SMILE_NS_BEGIN
@@ -30,7 +31,7 @@ class BufferPool {
      * Commits a transaction
      * @param in tId The id of the transaction to commit
      **/
-    commitTransaction( const transactionId_t tId );
+    void commitTransaction( const transactionId_t tId );
 
     /**
      * Allocates a buffer
