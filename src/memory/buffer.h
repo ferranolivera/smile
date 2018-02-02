@@ -4,7 +4,7 @@
 #ifndef _SMILE_MEMORY_BUFFER_H_
 #define _SMILE_MEMORY_BUFFER_H_ 
 
-#include <memory/types.h>
+#include "types.h"
 
 SMILE_NS_BEGIN
 

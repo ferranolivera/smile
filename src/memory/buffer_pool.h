@@ -4,11 +4,10 @@
 #ifndef _MEMORY_BUFFER_POOL_H_
 #define _MEMORY_BUFFER_POOL_H_
 
-#include <base/platform.h>
-#include <memory/types.h>
-#include <memory/buffer.h>
-#include <storage/file_storage.h>
-#include <memory>
+#include "../base/platform.h"
+#include "../storage/file_storage.h"
+#include "buffer.h"
+#include "types.h"
 
 SMILE_NS_BEGIN
 
@@ -17,7 +16,7 @@ class BufferPool {
     SMILE_NON_COPYABLE(BufferPool);
     friend class Buffer;
 
-    BufferPool(std::unique_ptr<FileStorage> storage) noexcept;
+    BufferPool(FileStorage* storage) noexcept;
     ~BufferPool() noexcept = default;
 
 
@@ -71,7 +70,7 @@ class BufferPool {
     /**
      * The file storage where this buffer pool will be persisted
      **/
-    std::unique_ptr<FileStorage>  m_storage;
+    FileStorage* const m_storage;
 
 };
 

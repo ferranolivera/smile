@@ -3,9 +3,8 @@
 #ifndef _BASE_PLATFORM_H_
 #define _BASE_PLATFORM_H_ 
 
-#include <base/macros.h>
-#include <base/types.h>
-#include <memory>
+#include "../base/macros.h"
+#include "../base/types.h"
 
 
 SMILE_NS_BEGIN

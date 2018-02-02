@@ -1,7 +1,6 @@
 
 
 add_definitions(${DEFAULT_DEFINES})
-include_directories(${SMILE_INCLUDE_DIR})
 
 if (UNIX)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-rtti -fno-exceptions")
@@ -11,13 +10,10 @@ if (UNIX)
 endif (UNIX)
 
 add_library(storage STATIC
-  error.h
   file_storage.cpp
   file_storage.h
   sequential_storage.h
   types.h
 )
 
-target_link_libraries(storage base)
-
-add_subdirectory(tests)
+#target_link_libraries(storage base)

@@ -43,19 +43,10 @@ endif(UNIX)
 #
 # Set project paths
 #
-set(SMILE_DIR "${SMILE_SOURCE_DIR}/src")
-set(SMILE_INCLUDE_DIR "${SMILE_DIR}/")
+#set(SMILE_DIR "${SMILE_SOURCE_DIR}/src")
+#set(SMILE_INCLUDE_DIR "${SMILE_DIR}/")
 
 MESSAGE(STATUS ${SMILE_INCLUDE_DIR})
-
-if (UNIX)
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -fPIC -std=c++14")
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -fPIC -std=c++14")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -ggdb -fPIC -std=c++14")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -ggdb -fPIC -std=c++14")
-endif (UNIX)
-
-
 
 #
 # Enabling testing
@@ -64,8 +55,6 @@ add_subdirectory(libs/gtest)
 enable_testing()
 set(GTEST_INCLUDE_DIRS  "${CMAKE_SOURCE_DIR}/tools/gtest/include/")
 set(GTEST_LIBRARIES "gtest")
-add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND})
-add_custom_target(check-io COMMAND ${CMAKE_CTEST_COMMAND} -R "-io")
 
 #
 # Boost
@@ -79,8 +68,8 @@ FIND_PACKAGE(Boost 1.62 COMPONENTS program_options date_time thread system local
 # Set output folders
 #
 set(SMILE_LIB_OUTPUT_DIR "${CMAKE_BINARY_DIR}/lib")
-set(SMILE_EXEC_OUTPUT_DIR "${CMAKE_BINARY_DIR}/bin")
-set(SMILE_TEST_OUTPUT_DIR "${SMILE_EXEC_OUTPUT_DIR}/test")
+set(SMILE_BIN_OUTPUT_DIR "${CMAKE_BINARY_DIR}/bin")
+set(SMILE_TEST_OUTPUT_DIR "${SMILE_BIN_OUTPUT_DIR}/test")
 
 
 #
@@ -90,11 +79,6 @@ message(STATUS "SMILE v" ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_RELEASE})
 message(STATUS "PLATFORM ${SO} ${ARCHTYPE}bits")
 message(STATUS "BUILD_TYPE ${CMAKE_BUILD_TYPE}")
 message(STATUS "DEFAULT DEFINES: " ${DEFAULT_DEFINES})
-if(CMAKE_BUILD_TYPE STREQUAL RELEASE)
-    message(STATUS "CXX: " ${CMAKE_CXX_FLAGS_RELEASE})
-else(CMAKE_BUILD_TYPE STREQUAL RELEASE)
-    message(STATUS "CXX: " ${CMAKE_CXX_FLAGS_DEBUG})
-endif(CMAKE_BUILD_TYPE STREQUAL RELEASE)
 message(STATUS "CMAKE_SYSTEM_NAME: " ${CMAKE_SYSTEM_NAME})
 message(STATUS "CMAKE_SYSTEM_PROCESSOR: " ${CMAKE_SYSTEM_PROCESSOR})
 

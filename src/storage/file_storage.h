@@ -2,8 +2,9 @@
 #ifndef _STORAGE_FILE_STORAGE_H_
 #define _STORAGE_FILE_STORAGE_H_ 
 
-#include "base/platform.h"
-#include "storage/sequential_storage.h"
+#include "../base/platform.h"
+#include "sequential_storage.h"
+
 #include <fstream>
 
 SMILE_NS_BEGIN
@@ -16,17 +17,17 @@ class FileStorage : public ISequentialStorage {
 
     virtual ~FileStorage() noexcept;
 
-    storageError_t open( const std::string& path ) noexcept override;
+    ErrorCode open( const std::string& path ) noexcept override;
 
-    storageError_t create( const std::string& path, const SequentialStorageConfig& config, const bool overwrite = false ) noexcept override;
+    ErrorCode create( const std::string& path, const SequentialStorageConfig& config, const bool overwrite = false ) noexcept override;
 
-    storageError_t close() noexcept override;
+    ErrorCode close() noexcept override;
 
-    storageError_t reserve( const uint32_t numExtents, extentId_t& extents ) noexcept override;
+    ErrorCode reserve( const uint32_t numExtents, extentId_t& extents ) noexcept override;
 
-    storageError_t read( char* data, const extentId_t extent ) noexcept override;
+    ErrorCode read( char* data, const extentId_t extent ) noexcept override;
 
-    storageError_t write( const char* data, const extentId_t extent ) noexcept override;
+    ErrorCode write( const char* data, const extentId_t extent ) noexcept override;
 
     uint64_t size() const noexcept override;
 

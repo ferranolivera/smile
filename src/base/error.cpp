@@ -1,10 +1,10 @@
 
-#include <base/error.h>
+#include "../base/error.h"
 
 SMILE_NS_BEGIN
 
-bool isError(const Error& e) {
-  return e != Error::E_NO_ERROR;
+bool isError(const ErrorCode& e) {
+  return e != ErrorCode::E_NO_ERROR;
 }
 
 SMILE_NS_END

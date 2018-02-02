@@ -2,11 +2,6 @@
 #include_directories(${Boost_INCLUDE_DIR})
 
 add_definitions(${DEFAULT_DEFINES})
-include_directories(${SMILE_INCLUDE_DIR})
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
 
 add_library(data STATIC 
   graph.cpp
@@ -21,5 +16,5 @@ add_library(data STATIC
   types_traits.cpp
 )
 
-target_link_libraries(data base ${Boost_LIBRARIES})
+#target_link_libraries(data base ${Boost_LIBRARIES})
 

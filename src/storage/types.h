@@ -4,7 +4,7 @@
 #ifndef _SMILE_STORAGE_TYPES_
 #define _SMILE_STORAGE_TYPES_
 
-#include "base/platform.h"
+#include "../base/platform.h"
 
 
 SMILE_NS_BEGIN

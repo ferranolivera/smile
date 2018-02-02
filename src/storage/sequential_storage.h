@@ -2,10 +2,8 @@
 #ifndef _SMILE_STORAGE_STORAGE_H
 #define _SMILE_STORAGE_STORAGE_H 
 
-#include "base/platform.h"
-#include "base/platform.h"
-#include "storage/types.h"
-#include "storage/error.h"
+#include "../base/base.h"
+#include "types.h"
 #include <vector>
 #include <string>
 
@@ -27,20 +25,20 @@ class ISequentialStorage {
      * @param in the path to the storage
      * @return true if the storage was opened correctly
      **/
-    virtual storageError_t open( const std::string& path ) noexcept = 0;
+    virtual ErrorCode open( const std::string& path ) noexcept = 0;
 
     /**
      * Opens the file storage at the given path
      * @param in the path to the storage to create
      * @return in the configuration of the storage
      **/
-    virtual storageError_t create( const std::string& path, const SequentialStorageConfig& config, const bool overwrite = false) noexcept = 0;
+    virtual ErrorCode create( const std::string& path, const SequentialStorageConfig& config, const bool overwrite = false) noexcept = 0;
 
     /**
      * Closes the storage
      * @return true if the closing was successful
      **/
-    virtual storageError_t close() noexcept = 0;
+    virtual ErrorCode close() noexcept = 0;
 
     /**
      * Reserve a set of extents
@@ -48,7 +46,7 @@ class ISequentialStorage {
      * @param out extentId The first reserved extentId
      * @return false if there was an error. true otherwise
      **/
-    virtual storageError_t reserve( const uint32_t numExtents, extentId_t& extents ) noexcept = 0;
+    virtual ErrorCode reserve( const uint32_t numExtents, extentId_t& extents ) noexcept = 0;
 
     /**
      * Locks an extent into a buffer
@@ -56,7 +54,7 @@ class ISequentialStorage {
      * @param in extent The extent to lock
      * @return false if the lock was not successful. true otherwise
      * */
-    virtual storageError_t read( char* data, const extentId_t extent ) noexcept = 0;
+    virtual ErrorCode read( char* data, const extentId_t extent ) noexcept = 0;
 
     /**
      * Unlocks the given extent
@@ -65,7 +63,7 @@ class ISequentialStorage {
      * @param in drity Whether to write the extent to disk or not.
      * @return false if the unlock was unsuccessful. true otherwise.
      **/
-    virtual storageError_t write( const char* data, const extentId_t extent ) noexcept = 0;
+    virtual ErrorCode write( const char* data, const extentId_t extent ) noexcept = 0;
 
 
 
