@@ -7,9 +7,10 @@ WORKDIR /home/user
 
 ADD src ./src 
 ADD CMakeLists.txt ./
-ADD cmake ./cmake 
+ADD libs ./libs 
 
 RUN mkdir build 
 
 # Required system packages
-RUN apt-get install -y gcc cmake numactl make libboost1.58-all-dev  
+RUN apt-get update  
+RUN apt-get -y install g++-5 gcc-5 build-essential cmake numactl make libboost1.58-all-dev  
