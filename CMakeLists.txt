@@ -62,7 +62,7 @@ set(GTEST_LIBRARIES "gtest")
 set(Boost_USE_STATIC_LIBS OFF) 
 set(Boost_USE_MULTITHREADED ON)  
 set(Boost_USE_STATIC_RUNTIME OFF) 
-FIND_PACKAGE(Boost 1.62 COMPONENTS program_options date_time thread system locale REQUIRED)
+FIND_PACKAGE(Boost 1.58 COMPONENTS program_options date_time thread system locale REQUIRED)
 
 #
 # Set output folders
