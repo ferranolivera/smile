@@ -27,7 +27,7 @@ ErrorCode FileStorage::open( const std::string& path ) noexcept {
   return ErrorCode::E_NO_ERROR;
 }
 
-ErrorCode FileStorage::create( const std::string& path, const SequentialStorageConfig& config, const bool overwrite ) noexcept {
+ErrorCode FileStorage::create( const std::string& path, const FileStorageConfig& config, const bool overwrite ) noexcept {
   if(!overwrite && std::ifstream(path)) {
     return ErrorCode::E_STORAGE_PATH_ALREADY_EXISTS;
   }
@@ -106,7 +106,7 @@ uint64_t FileStorage::size() const noexcept {
   return m_size;
 }
 
-const ISequentialStorage::SequentialStorageConfig& FileStorage::config() const noexcept {
+const FileStorageConfig& FileStorage::config() const noexcept {
   return m_config;
 }
 

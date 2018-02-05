@@ -14,7 +14,7 @@ SMILE_NS_BEGIN
  */
 TEST(FileStorageTest, FileStorageOpen) {
   FileStorage fileStorage;
-  ASSERT_TRUE(fileStorage.create("./test.db", ISequentialStorage::SequentialStorageConfig{4}, true) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(fileStorage.create("./test.db", FileStorageConfig{4}, true) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(fileStorage.close() == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(fileStorage.open("./test.db") == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(fileStorage.config().m_extentSizeKB == 4);
@@ -27,7 +27,7 @@ TEST(FileStorageTest, FileStorageOpen) {
  */
 TEST(FileStorageTest, FileStorageReserve) {
   FileStorage fileStorage;
-  ASSERT_TRUE(fileStorage.create("./test.db", ISequentialStorage::SequentialStorageConfig{64}, true) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(fileStorage.create("./test.db", FileStorageConfig{64}, true) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(fileStorage.close() == ErrorCode::E_NO_ERROR);
 
   ASSERT_TRUE(fileStorage.open("./test.db") == ErrorCode::E_NO_ERROR);
@@ -52,7 +52,7 @@ TEST(FileStorageTest, FileStorageReserve) {
  **/
 TEST(FileStorageTest, FileStorageReadWrite) {
   FileStorage fileStorage;
-  ASSERT_TRUE(fileStorage.create("./test.db", ISequentialStorage::SequentialStorageConfig{64}, true) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(fileStorage.create("./test.db", FileStorageConfig{64}, true) == ErrorCode::E_NO_ERROR);
 
   auto storageConfig = fileStorage.config();
   std::vector<char> data(storageConfig.m_extentSizeKB*1024);
@@ -81,13 +81,13 @@ TEST(FileStorageTest, FileStorageReadWrite) {
  **/
 TEST(FileStorageTest, FileStorageErrors) {
   FileStorage fileStorage;
-  ASSERT_TRUE(fileStorage.create("./test.db", ISequentialStorage::SequentialStorageConfig{64}, true) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(fileStorage.create("./test.db", FileStorageConfig{64}, true) == ErrorCode::E_NO_ERROR);
   auto storageConfig = fileStorage.config();
   std::vector<char> data(storageConfig.m_extentSizeKB*1024);
   ASSERT_TRUE(fileStorage.write(data.data(),63) == ErrorCode::E_STORAGE_OUT_OF_BOUNDS_EXTENT);
   ASSERT_TRUE(fileStorage.read(data.data(),32) == ErrorCode::E_STORAGE_OUT_OF_BOUNDS_EXTENT);
   ASSERT_TRUE(fileStorage.close() == ErrorCode::E_NO_ERROR);
-  ASSERT_TRUE(fileStorage.create("./test.db", ISequentialStorage::SequentialStorageConfig{64}) == ErrorCode::E_STORAGE_PATH_ALREADY_EXISTS);
+  ASSERT_TRUE(fileStorage.create("./test.db", FileStorageConfig{64}) == ErrorCode::E_STORAGE_PATH_ALREADY_EXISTS);
 }
 
 
