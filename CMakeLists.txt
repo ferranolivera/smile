@@ -52,6 +52,7 @@ MESSAGE(STATUS ${SMILE_INCLUDE_DIR})
 # Enabling testing
 #
 add_subdirectory(libs/gtest)
+set(GTEST_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/libs/gtest/include" )
 enable_testing()
 set(GTEST_INCLUDE_DIRS  "${CMAKE_SOURCE_DIR}/tools/gtest/include/")
 set(GTEST_LIBRARIES "gtest")
