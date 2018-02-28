@@ -62,8 +62,7 @@ struct bufferDescriptor {
 class BufferPool {
 
   public:
-
-    SMILE_NON_COPYABLE(BufferPool);
+    SMILE_NOT_COPYABLE(BufferPool);
 
     friend class Buffer;
 
