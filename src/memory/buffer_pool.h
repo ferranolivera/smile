@@ -5,6 +5,7 @@
 #define _MEMORY_BUFFER_POOL_H_
 
 #include <map>
+#include <list>
 #include "../base/platform.h"
 #include "../storage/file_storage.h"
 #include "types.h"
@@ -39,6 +40,10 @@ struct BufferHandler {
 
 struct bufferDescriptor {
     /**
+     * Whether a buffer slot is currently being used or not.
+     */
+    bool        m_inUse         = false;
+    /**
      * Number of current references of the page.
      */
     uint64_t    m_referenceCount = 0;
@@ -51,7 +56,7 @@ struct bufferDescriptor {
     /**
      * Whether the buffer is dirty or not.
      */
-    bool        m_dirty         = 0;
+    bool        m_dirty         = false;
 
     /**
      * pageId_t on disk of the loaded page.
@@ -66,9 +71,32 @@ class BufferPool {
 
     friend class Buffer;
 
-    BufferPool( FileStorage* storage, const BufferPoolConfig& config) noexcept;
+    BufferPool() noexcept;
 
     ~BufferPool() noexcept = default;
+
+    /**
+     * Opens the Buffer Pool with a file storage at the given path.
+     * 
+     * @param in the path to the storage.
+     * @return false if the storage was opened correctly.
+     **/
+    ErrorCode open( const BufferPoolConfig& bpConfig, const std::string& path ) noexcept;
+
+    /**
+     * Opens the Buffer Pool with a file storage at the given path.
+     * 
+     * @param in the path to the storage to create.
+     * @return in the configuration of the storage.
+     **/
+    ErrorCode create( const BufferPoolConfig& bpConfig, const std::string& path, const FileStorageConfig& fsConfig, const bool& overwrite = false ) noexcept;
+
+    /**
+     * Closes the Buffer Pool.
+     * 
+     * @return false if the closing was successful.
+     **/
+    ErrorCode close() noexcept;
 
     /**
      * Allocates a new page in the Buffer Pool.
@@ -115,7 +143,7 @@ class BufferPool {
      * 
      * @param pId pageId_t of the page to be set as dirty.
      */
-    void setPageDirty( const pageId_t& pId ) noexcept;
+    ErrorCode setPageDirty( const pageId_t& pId ) noexcept;
 
   private:
 
@@ -137,9 +165,45 @@ class BufferPool {
     ErrorCode getEmptySlot( bufferId_t* bId ) noexcept;
 
     /**
+     * Reserve a set of pages and manage the increments of the allocation table.
+     * 
+     * @param numPages The number of pages to reserve
+     * @param pageId The first reserved pageId
+     * @return false if there was an error, true otherwise
+     */
+    ErrorCode reservePages( const uint32_t& numPages, pageId_t* pageId ) noexcept;
+
+    /**
+     * Loads the allocation table from disk.
+     * 
+     * @return false if table is loaded without issues, true otherwise.
+     */
+    ErrorCode loadAllocationTable() noexcept;
+
+    /**
+     * Stores the allocation table in disk.
+     * 
+     * @return false if the table is stored without issues, true otherwise.
+     */
+    ErrorCode storeAllocationTable() noexcept;
+
+    /**
+     * Returns whether a page is protected (used for storing DB state) or not.
+     * 
+     * @param pId pageId_t of the page to check.
+     * @return true if the page is protected, false otherwise.
+     */
+    bool isProtected( const pageId_t& pId ) noexcept;
+
+    /**
      * The file storage where this buffer pool will be persisted.
      **/
-    FileStorage* p_storage;
+    FileStorage m_storage;
+
+    /**
+     * The Buffer Pool configuration data.
+     */
+    BufferPoolConfig m_config;
 
     /**
      * Buffer pool.
@@ -152,9 +216,14 @@ class BufferPool {
     std::vector<bufferDescriptor> m_descriptors;
 
     /**
-     * Bitset representing whether a Buffer Pool slot is allocated (1) or not (0).
+     * Bitset representing whether a disk page is allocated (1) or not (0).
      */
     boost::dynamic_bitset<> m_allocationTable;
+
+    /**
+     * List of free (unallocated) pages.
+     */
+    std::list<pageId_t> m_freePages;
 
     /**
      * Maps pageId_t with its bufferId_t in case it is currently in the Buffer Pool. 

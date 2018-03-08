@@ -11,9 +11,8 @@ SMILE_NS_BEGIN
  * that the Clock Sweep Algorithm is behaving as expected.
  */
 TEST(BufferPoolTest, BufferPoolAlloc) {
-  FileStorage fileStorage;
-  ASSERT_TRUE(fileStorage.create("./test.db", FileStorageConfig{64}, true) == ErrorCode::E_NO_ERROR);
-  BufferPool bufferPool(&fileStorage, BufferPoolConfig{256});
+  BufferPool bufferPool;
+  ASSERT_TRUE(bufferPool.create(BufferPoolConfig{256}, "./test.db", FileStorageConfig{64}, true) == ErrorCode::E_NO_ERROR);
   BufferHandler bufferHandler1, bufferHandler2, bufferHandler3, bufferHandler4;
 
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler1) == ErrorCode::E_NO_ERROR);
@@ -52,9 +51,8 @@ TEST(BufferPoolTest, BufferPoolAlloc) {
  * P to bring it back to main memory and check that the data we have written still persists.
  */
 TEST(BufferPoolTest, BufferPoolPinAndWritePage) {
-  FileStorage fileStorage;
-  ASSERT_TRUE(fileStorage.create("./test.db", FileStorageConfig{64}, true) == ErrorCode::E_NO_ERROR);
-  BufferPool bufferPool(&fileStorage, BufferPoolConfig{256});
+  BufferPool bufferPool;
+  ASSERT_TRUE(bufferPool.create(BufferPoolConfig{256}, "./test.db", FileStorageConfig{64}, true) == ErrorCode::E_NO_ERROR);
   BufferHandler bufferHandler;
 
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
@@ -109,13 +107,17 @@ TEST(BufferPoolTest, BufferPoolPinAndWritePage) {
  * Tests that the Buffer Pool is properly reporting errors.
  **/
 TEST(BufferPoolTest, BufferPoolErrors) {
-  FileStorage fileStorage;
-  ASSERT_TRUE(fileStorage.create("./test.db", FileStorageConfig{64}, true) == ErrorCode::E_NO_ERROR);
-  BufferPool bufferPool(&fileStorage, BufferPoolConfig{256});
+  BufferPool bufferPool;
+  ASSERT_TRUE(bufferPool.create(BufferPoolConfig{256}, "./test.db", FileStorageConfig{64}, true) == ErrorCode::E_NO_ERROR);
   BufferHandler bufferHandler;
 
-  ASSERT_TRUE(bufferPool.unpin(0) == ErrorCode::E_BUFPOOL_PAGE_NOT_PRESENT);
-  ASSERT_TRUE(bufferPool.release(0) == ErrorCode::E_BUFPOOL_PAGE_NOT_PRESENT);
+  ASSERT_TRUE(bufferPool.pin(0, &bufferHandler) == ErrorCode::E_BUFPOOL_UNABLE_TO_ACCCESS_PROTECTED_PAGE);
+  ASSERT_TRUE(bufferPool.unpin(0) == ErrorCode::E_BUFPOOL_UNABLE_TO_ACCCESS_PROTECTED_PAGE);
+  ASSERT_TRUE(bufferPool.release(0) == ErrorCode::E_BUFPOOL_UNABLE_TO_ACCCESS_PROTECTED_PAGE);
+  
+  ASSERT_TRUE(bufferPool.pin(1, &bufferHandler) == ErrorCode::E_BUFPOOL_PAGE_NOT_ALLOCATED);
+  ASSERT_TRUE(bufferPool.unpin(1) == ErrorCode::E_BUFPOOL_PAGE_NOT_ALLOCATED);
+  ASSERT_TRUE(bufferPool.release(1) == ErrorCode::E_BUFPOOL_PAGE_NOT_ALLOCATED);
 
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler.m_bId == 0);
@@ -123,8 +125,8 @@ TEST(BufferPoolTest, BufferPoolErrors) {
   ASSERT_TRUE(bufferPool.unpin(pId) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferPool.release(pId) == ErrorCode::E_NO_ERROR);
 
-  ASSERT_TRUE(bufferPool.unpin(0) == ErrorCode::E_BUFPOOL_PAGE_NOT_PRESENT);
-  ASSERT_TRUE(bufferPool.release(0) == ErrorCode::E_BUFPOOL_PAGE_NOT_PRESENT);
+  ASSERT_TRUE(bufferPool.unpin(1) == ErrorCode::E_BUFPOOL_PAGE_NOT_PRESENT);
+  ASSERT_TRUE(bufferPool.release(1) == ErrorCode::E_NO_ERROR);
 
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler.m_bId == 0);
@@ -140,6 +142,41 @@ TEST(BufferPoolTest, BufferPoolErrors) {
   ASSERT_TRUE(bufferPool.release(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler.m_bId == 3);
+
+  ASSERT_TRUE(bufferPool.close() == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(bufferPool.open(BufferPoolConfig{257}, "./test.db") == ErrorCode::E_BUFPOOL_POOL_SIZE_NOT_MULTIPLE_OF_PAGE_SIZE);
+  ASSERT_TRUE(bufferPool.create(BufferPoolConfig{257}, "./test.db", FileStorageConfig{64}, true) == ErrorCode::E_BUFPOOL_POOL_SIZE_NOT_MULTIPLE_OF_PAGE_SIZE);
+}
+
+/**
+ * Tests that the Buffer Pool is correctly storing/retrieving the m_allocationTable 
+ * information from disk.
+ **/
+TEST(BufferPoolTest, BufferPoolPersistence) {
+  BufferPool bufferPool;
+  ASSERT_TRUE(bufferPool.create(BufferPoolConfig{64*8192}, "./test.db", FileStorageConfig{4}, true) == ErrorCode::E_NO_ERROR);
+  BufferHandler bufferHandler;
+
+  // Allocate pages so that we need a page and a half to store the m_allocationTable.
+  uint64_t pagesToAlloc = (4*1024*8)+(4*1024*4);
+  for (uint64_t i = 0; i < pagesToAlloc; ++i) {
+    ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
+    ASSERT_TRUE(bufferPool.unpin(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR);
+  }
+
+  // Force BufferPool to flush m_allocationTable to disk.
+  ASSERT_TRUE(bufferPool.close() == ErrorCode::E_NO_ERROR);
+
+  // Create a new BufferPool that uses the already existing storage.
+  // It will load the m_allocationTable information from disk to memory.
+  BufferPool bufferPoolAux;
+  ASSERT_TRUE(bufferPoolAux.open(BufferPoolConfig{64*8192}, "./test.db") == ErrorCode::E_NO_ERROR);
+
+  // Allocate a page with the new Buffer Pool and check that the obtained pageId_t is correct.
+  // The Buffer Pool will be using 2 extra pages in order to store the m_allocationTable information.
+  // Thus, the retrieved pageId_t should be pagesToAlloc+2.
+  ASSERT_TRUE(bufferPoolAux.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(bufferHandler.m_pId == pagesToAlloc+2);
 }
 
 SMILE_NS_END

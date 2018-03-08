@@ -4,31 +4,96 @@
 
 SMILE_NS_BEGIN
 
-BufferPool::BufferPool( FileStorage* storage, const BufferPoolConfig& config ) noexcept {
-	p_storage = storage;
-	p_pool = (char*) malloc( config.m_poolSizeKB*1024*sizeof(char) );
+BufferPool::BufferPool() noexcept {	
+}
 
-	uint32_t pageSizeKB = p_storage->getPageSize() / 1024;
-	uint32_t poolElems = config.m_poolSizeKB / pageSizeKB;
+ErrorCode BufferPool::open( const BufferPoolConfig& bpConfig, const std::string& path ) noexcept {
+	if ( bpConfig.m_poolSizeKB % (m_storage.getPageSize()/1024) != 0 ) {
+		return ErrorCode::E_BUFPOOL_POOL_SIZE_NOT_MULTIPLE_OF_PAGE_SIZE;
+	}
+
+	ErrorCode error = m_storage.open(path);
+	if ( error != ErrorCode::E_NO_ERROR ) {
+		return error;
+	}
+
+	m_config = bpConfig;
+	p_pool = (char*) malloc( m_config.m_poolSizeKB*1024*sizeof(char) );
+	uint32_t pageSizeKB = m_storage.getPageSize() / 1024;
+	uint32_t poolElems = m_config.m_poolSizeKB / pageSizeKB;
 	m_descriptors.resize(poolElems);
-	m_allocationTable.resize(poolElems);
 	m_nextCSVictim = 0;
+
+	error = loadAllocationTable();
+	if ( error != ErrorCode::E_NO_ERROR ) {
+		return error;
+	}
+
+	return ErrorCode::E_NO_ERROR;
+}
+
+ErrorCode BufferPool::create( const BufferPoolConfig& bpConfig, const std::string& path, const FileStorageConfig& fsConfig, const bool& overwrite ) noexcept {
+	if ( bpConfig.m_poolSizeKB % fsConfig.m_pageSizeKB != 0 ) {
+		return ErrorCode::E_BUFPOOL_POOL_SIZE_NOT_MULTIPLE_OF_PAGE_SIZE;
+	}
+
+	ErrorCode error = m_storage.create(path, fsConfig, overwrite);
+	if ( error != ErrorCode::E_NO_ERROR ) {
+		return error;
+	}
+
+	m_config = bpConfig;
+	p_pool = (char*) malloc( m_config.m_poolSizeKB*1024*sizeof(char) );
+	uint32_t pageSizeKB = m_storage.getPageSize() / 1024;
+	uint32_t poolElems = m_config.m_poolSizeKB / pageSizeKB;
+	m_descriptors.resize(poolElems);
+	m_nextCSVictim = 0;
+
+	return ErrorCode::E_NO_ERROR;
+}
+
+ErrorCode BufferPool::close() noexcept {
+	ErrorCode error = checkpoint();
+	if ( error != ErrorCode::E_NO_ERROR ) {
+		return error;
+	}
+
+	error = m_storage.close();
+	if ( error != ErrorCode::E_NO_ERROR ) {
+		return error;
+	}
+
+	free(p_pool);
+	m_descriptors.clear();
+	m_allocationTable.clear();
+	m_freePages.clear();
+	m_bufferToPageMap.clear();
+
+	return ErrorCode::E_NO_ERROR;
 }
 
 ErrorCode BufferPool::alloc( BufferHandler* bufferHandler ) noexcept {
-	// Get an empty buffer pool slot for the page.
 	bufferId_t bId;
+	pageId_t pId;
+
+	// Get an empty buffer pool slot for the page.
 	ErrorCode error = getEmptySlot(&bId);
 	if ( error != ErrorCode::E_NO_ERROR ) {
 		return error;
 	}
 
-	// Reserve space in disk and get the corresponding pageId_t.
-	pageId_t pId;
-	error = p_storage->reserve(1, &pId);
-	if ( error != ErrorCode::E_NO_ERROR ) {
-		return error;
+	// If there is no more free space in disk, reserve space.
+	if (m_freePages.empty()) {
+		error = reservePages(1, &pId);
+		if ( error != ErrorCode::E_NO_ERROR ) {
+			return error;
+		}
 	}
+
+	// Set page as allocated.
+	pId = m_freePages.front();
+	m_freePages.pop_front();
+	m_allocationTable.set(pId);
 
 	m_bufferToPageMap[pId] = bId;
 
@@ -47,7 +112,15 @@ ErrorCode BufferPool::alloc( BufferHandler* bufferHandler ) noexcept {
 }
 
 ErrorCode BufferPool::release( const pageId_t& pId ) noexcept {
-	// Check if the page is in the Buffer Pool.	
+	if (pId > m_storage.size()) {
+		return ErrorCode::E_BUFPOOL_PAGE_NOT_ALLOCATED;
+	}
+
+	if (isProtected(pId)) {
+		return ErrorCode::E_BUFPOOL_UNABLE_TO_ACCCESS_PROTECTED_PAGE;	
+	}
+
+	// Evict the page in case it is in the Buffer Pool
 	std::map<pageId_t, bufferId_t>::iterator it;
 	it = m_bufferToPageMap.find(pId);
 	if (it != m_bufferToPageMap.end()) {
@@ -56,12 +129,12 @@ ErrorCode BufferPool::release( const pageId_t& pId ) noexcept {
 		// Delete page entry from buffer table.
 		m_bufferToPageMap.erase(m_descriptors[bId].m_pageId);
 
-		// Set buffer as not allocated
-		m_allocationTable.set(bId, 0);
+		// Set buffer as not used
+		m_descriptors[bId].m_inUse = false;
 
 		// If the buffer is dirty we must store it to disk.
 		if( m_descriptors[bId].m_dirty ) {
-			ErrorCode error = p_storage->write(getBuffer(bId), m_descriptors[bId].m_pageId);
+			ErrorCode error = m_storage.write(getBuffer(bId), m_descriptors[bId].m_pageId);
 			if ( error != ErrorCode::E_NO_ERROR ) {
 				return error;
 			}
@@ -73,16 +146,23 @@ ErrorCode BufferPool::release( const pageId_t& pId ) noexcept {
 		m_descriptors[bId].m_dirty = 0;
 		m_descriptors[bId].m_pageId = 0;
 	}
-	else {
-		return ErrorCode::E_BUFPOOL_PAGE_NOT_PRESENT;
-	}
-
-	// TODO: notify storage to set as free?
+	
+	// Set page as unallocated.
+	m_allocationTable.set(pId, 0);
+	m_freePages.push_back(pId);
 
 	return ErrorCode::E_NO_ERROR;
 }
 
 ErrorCode BufferPool::pin( const pageId_t& pId, BufferHandler* bufferHandler ) noexcept {
+	if (pId > m_storage.size()) {
+		return ErrorCode::E_BUFPOOL_PAGE_NOT_ALLOCATED;
+	}
+
+	if (isProtected(pId)) {
+		return ErrorCode::E_BUFPOOL_UNABLE_TO_ACCCESS_PROTECTED_PAGE;	
+	}
+
 	bufferId_t bId;
 
 	// Look for the desired page in the Buffer Pool.
@@ -98,7 +178,7 @@ ErrorCode BufferPool::pin( const pageId_t& pId, BufferHandler* bufferHandler ) n
 			return error;
 		}
 
-		error = p_storage->read(getBuffer(bId), pId);
+		error = m_storage.read(getBuffer(bId), pId);
 		if ( error != ErrorCode::E_NO_ERROR ) {
 			return error;
 		}
@@ -128,6 +208,14 @@ ErrorCode BufferPool::pin( const pageId_t& pId, BufferHandler* bufferHandler ) n
 }
 
 ErrorCode BufferPool::unpin( const pageId_t& pId ) noexcept {
+	if (pId > m_storage.size()) {
+		return ErrorCode::E_BUFPOOL_PAGE_NOT_ALLOCATED;
+	}
+
+	if (isProtected(pId)) {
+		return ErrorCode::E_BUFPOOL_UNABLE_TO_ACCCESS_PROTECTED_PAGE;	
+	}
+
 	// Decrement page's reference count.
 	std::map<pageId_t, bufferId_t>::iterator it;
 	it = m_bufferToPageMap.find(pId);
@@ -144,9 +232,9 @@ ErrorCode BufferPool::unpin( const pageId_t& pId ) noexcept {
 
 ErrorCode BufferPool::checkpoint() noexcept {
 	// Look for dirty Buffer Pool slots and flush them to disk.
-	for (int bId = 0; bId < m_allocationTable.size(); ++bId) {
-		if (m_allocationTable.test(bId) && m_descriptors[bId].m_dirty) {
-			ErrorCode error = p_storage->write(getBuffer(bId), m_descriptors[bId].m_pageId);
+	for (int bId = 0; bId < m_descriptors.size(); ++bId) {
+		if (m_descriptors[bId].m_inUse && m_descriptors[bId].m_dirty) {
+			ErrorCode error = m_storage.write(getBuffer(bId), m_descriptors[bId].m_pageId);
 			if ( error != ErrorCode::E_NO_ERROR ) {
 				return error;
 			}
@@ -155,20 +243,31 @@ ErrorCode BufferPool::checkpoint() noexcept {
 		}
 	}
 
+	// Save m_allocationTable state to disk.
+	ErrorCode error = storeAllocationTable();
+	if ( error != ErrorCode::E_NO_ERROR ) {
+		return error;
+	}
+
 	return ErrorCode::E_NO_ERROR;
 }
 
-void BufferPool::setPageDirty( const pageId_t& pId ) noexcept {
+ErrorCode BufferPool::setPageDirty( const pageId_t& pId ) noexcept {
 	std::map<pageId_t, bufferId_t>::iterator it;
 	it = m_bufferToPageMap.find(pId);
 	if (it != m_bufferToPageMap.end()) {
 		bufferId_t bId = it->second;
 		m_descriptors[bId].m_dirty = 1;
 	}
+	else {
+		return ErrorCode::E_BUFPOOL_PAGE_NOT_PRESENT;
+	}
+
+	return ErrorCode::E_NO_ERROR;
 }
 
 char* BufferPool::getBuffer( const bufferId_t& bId ) noexcept {
-	char* buffer = p_pool + (p_storage->getPageSize()*bId);
+	char* buffer = p_pool + (m_storage.getPageSize()*bId);
 	return buffer;
 }
 
@@ -176,9 +275,9 @@ ErrorCode BufferPool::getEmptySlot( bufferId_t* bId ) noexcept {
 	bool found = false;
 
 	// Look for an empty Buffer Pool slot.
-	for (int i = 0; i < m_allocationTable.size() && !found; ++i) {
-		if (!m_allocationTable.test(i)) {
-			m_allocationTable.set(i);
+	for (int i = 0; i < m_descriptors.size() && !found; ++i) {
+		if (!m_descriptors[i].m_inUse) {
+			m_descriptors[i].m_inUse = true;
 			*bId = i;
 			found = true;
 		}
@@ -200,7 +299,7 @@ ErrorCode BufferPool::getEmptySlot( bufferId_t* bId ) noexcept {
 
 				// If the buffer is dirty we must store it to disk.
 				if( m_descriptors[*bId].m_dirty ) {
-					ErrorCode error = p_storage->write(getBuffer(*bId), m_descriptors[*bId].m_pageId);
+					ErrorCode error = m_storage.write(getBuffer(*bId), m_descriptors[*bId].m_pageId);
 					if ( error != ErrorCode::E_NO_ERROR ) {
 						return error;
 					}
@@ -228,6 +327,101 @@ ErrorCode BufferPool::getEmptySlot( bufferId_t* bId ) noexcept {
 	}
 
 	return ErrorCode::E_NO_ERROR;
+}
+
+ErrorCode BufferPool::reservePages( const uint32_t& numPages, pageId_t* pageId ) noexcept {
+	// Reserve space in disk.
+	ErrorCode error = m_storage.reserve(numPages, pageId);
+	if ( error != ErrorCode::E_NO_ERROR ) {
+		return error;
+	}
+
+	// Add reserved pages to free list.
+	for (uint64_t i = 0; i < numPages; ++i) {
+		m_freePages.push_back((*pageId)+i);
+	}
+
+	// If the first reserved page is protected, it must be removed from the free list and
+	// an extra page must be reserved.
+	if (isProtected(*pageId)) {
+		m_freePages.remove(*pageId);
+
+		pageId_t pIdToReturn = (*pageId) + 1;
+
+		ErrorCode error = m_storage.reserve(1, pageId);
+		if ( error != ErrorCode::E_NO_ERROR ) {
+			return error;
+		}
+		m_freePages.push_back(*pageId);
+
+		*pageId = pIdToReturn;
+	}
+
+	// Increment the Allocation Table size to fit the new pages (if needed).
+	uint64_t numTotalPages = m_storage.size();
+	uint64_t bitsPerPage = 8*m_storage.getPageSize();
+	uint64_t numBitmapPages = numTotalPages/bitsPerPage + (numTotalPages%bitsPerPage != 0);
+	uint64_t bitmapSize = numBitmapPages*bitsPerPage;
+	m_allocationTable.resize(bitmapSize);
+
+	return ErrorCode::E_NO_ERROR;
+}
+
+ErrorCode BufferPool::loadAllocationTable() noexcept {
+	uint64_t numTotalPages = m_storage.size();
+	uint64_t bitsPerPage = 8*m_storage.getPageSize();
+	uint64_t numBitmapPages = numTotalPages/bitsPerPage + (numTotalPages%bitsPerPage != 0);
+	uint64_t bitmapSize = numBitmapPages*bitsPerPage;
+	uint64_t blockSize = boost::dynamic_bitset<>::bits_per_block;
+
+	std::vector<boost::dynamic_bitset<>::block_type> v(bitmapSize/blockSize);
+
+	for (uint64_t i = 0; i < bitmapSize; i += bitsPerPage) {
+    	ErrorCode error = m_storage.read(reinterpret_cast<char*>(&v[i/blockSize]), i);
+    	if ( error != ErrorCode::E_NO_ERROR ) {
+			return error;
+		}
+    }
+
+    m_allocationTable.resize(bitmapSize);
+    from_block_range(v.begin(), v.end(), m_allocationTable);
+
+    // Add the unallocated pages to the free list
+    for (uint64_t i = 0; i < m_allocationTable.size(); ++i) {
+    	if (!m_allocationTable.test(i) && !isProtected(i)) {
+    		m_freePages.push_back(i);
+    	}
+    }
+
+    return ErrorCode::E_NO_ERROR;
+}
+
+ErrorCode BufferPool::storeAllocationTable() noexcept {
+    std::vector<boost::dynamic_bitset<>::block_type> v(m_allocationTable.num_blocks());
+    to_block_range(m_allocationTable, v.begin());
+
+    uint64_t bitsPerPage = 8*m_storage.getPageSize(); 
+    uint64_t blockSize = boost::dynamic_bitset<>::bits_per_block;
+
+    for (uint64_t i = 0; i < m_allocationTable.size(); i += bitsPerPage) {
+    	ErrorCode error = m_storage.write(reinterpret_cast<char*>(&v[i/blockSize]), i);
+    	if ( error != ErrorCode::E_NO_ERROR ) {
+			return error;
+		}
+    }
+
+    return ErrorCode::E_NO_ERROR;
+}
+
+bool BufferPool::isProtected( const pageId_t& pId ) noexcept {
+	bool retval = false;
+
+	uint64_t bitsPerPage = 8*m_storage.getPageSize();
+	if (pId%bitsPerPage == 0) {
+		retval = true;
+	}
+
+	return retval;
 }
 
 SMILE_NS_END
