@@ -6,6 +6,7 @@
 
 #include <map>
 #include <list>
+#include <mutex>
 #include "../base/platform.h"
 #include "../storage/file_storage.h"
 #include "types.h"
@@ -38,7 +39,7 @@ struct BufferHandler {
     bufferId_t      m_bId;
 };
 
-struct bufferDescriptor {
+struct BufferDescriptor {
     /**
      * Whether a buffer slot is currently being used or not.
      */
@@ -62,6 +63,18 @@ struct bufferDescriptor {
      * pageId_t on disk of the loaded page.
      */
     pageId_t    m_pageId        = 0;
+};
+
+struct BufferPoolStatistics {
+    /**
+     * Number of pages currently in Buffer Pool. 
+     */
+    uint64_t    m_numAllocatedPages;
+
+    /**
+     * Number of pages reserved in the storage.
+     */
+    uint64_t    m_numReservedPages;    
 };
 
 class BufferPool {
@@ -145,6 +158,21 @@ class BufferPool {
      */
     ErrorCode setPageDirty( const pageId_t& pId ) noexcept;
 
+    /**
+     * Gets some stats regarding the Buffer Pool's usage.
+     * 
+     * @param stats The BufferPoolStatistics to fill with stats.
+     * @return false if stats were correctly retrieved, true ottherwise.
+     */
+    ErrorCode getStatistics( BufferPoolStatistics* stats ) noexcept;
+
+    /**
+     * Checks Buffer Pool's consistency 
+     * 
+     * @return false if Buffer Pool is in a consistent state, true ottherwise.
+     */
+    ErrorCode checkConsistency() noexcept;
+
   private:
 
     /**
@@ -196,6 +224,13 @@ class BufferPool {
     bool isProtected( const pageId_t& pId ) noexcept;
 
     /**
+     * Flushes dirty buffers back to disk.
+     * 
+     * @return false if buffers have been correctly flushed, true otherwise
+     */
+    ErrorCode flushDirtyBuffers() noexcept;
+
+    /**
      * The file storage where this buffer pool will be persisted.
      **/
     FileStorage m_storage;
@@ -213,7 +248,7 @@ class BufferPool {
     /**
      * Buffer descriptors (metadata).
      */
-    std::vector<bufferDescriptor> m_descriptors;
+    std::vector<BufferDescriptor> m_descriptors;
 
     /**
      * Bitset representing whether a disk page is allocated (1) or not (0).
@@ -234,6 +269,11 @@ class BufferPool {
      * Next victim to test during Clock Sweep.
      */
     uint64_t m_nextCSVictim;
+
+    /**
+     * Global lock to isolate concurrent operations by different threads.
+     */
+    std::mutex m_globalLoc;
 };
 
 SMILE_NS_END

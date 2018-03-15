@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <memory/buffer_pool.h>
+#include <thread>
 
 SMILE_NS_BEGIN
 
@@ -177,6 +178,90 @@ TEST(BufferPoolTest, BufferPoolPersistence) {
   // Thus, the retrieved pageId_t should be pagesToAlloc+2.
   ASSERT_TRUE(bufferPoolAux.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler.m_pId == pagesToAlloc+2);
+}
+
+/**
+ * Used by BufferPoolThreadSafe.
+ */
+struct Params {
+  Params() {}
+  Params(BufferPool* bp, pageId_t pId) {
+    p_bp = bp;
+    m_pId = pId;
+  }
+
+  BufferPool* p_bp;
+  pageId_t m_pId;
+};
+
+/**
+ * Used by BufferPoolThreadSafe.
+ */
+void release(Params* params) {
+  ASSERT_TRUE(params->p_bp->release(params->m_pId) == ErrorCode::E_NO_ERROR);
+}
+
+/**
+ * Used by BufferPoolThreadSafe.
+ */
+void unpin(Params* params) {
+  ASSERT_TRUE(params->p_bp->setPageDirty(params->m_pId) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(params->p_bp->unpin(params->m_pId) == ErrorCode::E_NO_ERROR);
+}
+
+/**
+ * Used by BufferPoolThreadSafe.
+ */
+void checkpoint(Params* params) {
+  ASSERT_TRUE(params->p_bp->checkpoint() == ErrorCode::E_NO_ERROR);
+}
+
+/**
+ * Tests that the buffer pool is thread safe. In order to do so, a 1GB-buffer-pool is created and later
+ * several alloc/release/unpin/checkpoint/setPageDirty operations are used by different threads. Finally,
+ * we check that the state of the Buffer Pool is consistent.
+ */
+TEST(BufferPoolTest, BufferPoolThreadSafe) {
+  // 16384 buffers * 64 KB/page = 1 GB of buffer pool.
+  uint32_t poolSize = 16384;
+  uint32_t allocatedPages = 0;
+  BufferPool bufferPool;
+  ASSERT_TRUE(bufferPool.create(BufferPoolConfig{64*poolSize}, "./test.db", FileStorageConfig{64}, true) == ErrorCode::E_NO_ERROR);
+  BufferHandler bufferHandler;
+
+  std::vector<std::thread> threads;
+  std::vector<Params> params(poolSize);
+
+  for (uint64_t i = 0; i < poolSize-1; ++i) {
+    ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
+    ++allocatedPages;
+
+    Params aux(&bufferPool, bufferHandler.m_pId);    
+    params[i] = aux; 
+
+    bool doRelease = ((rand()%2) == 0);
+    if (doRelease) {
+      threads.push_back(std::thread(release, &params[i]));
+      --allocatedPages;
+    }
+    else {
+      threads.push_back(std::thread(unpin, &params[i]));
+    }
+
+    if ((i%256) == 0) {
+      threads.push_back(std::thread(checkpoint, &params[i]));
+    }
+  }
+
+  for (auto& th : threads) {
+    th.join();
+  }
+
+  BufferPoolStatistics stats;
+  ASSERT_TRUE(bufferPool.getStatistics(&stats) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(stats.m_numAllocatedPages == allocatedPages);
+  
+  ASSERT_TRUE(bufferPool.checkConsistency() == ErrorCode::E_NO_ERROR);
 }
 
 SMILE_NS_END
