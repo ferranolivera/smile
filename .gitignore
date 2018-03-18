@@ -27,3 +27,7 @@
 *.exe
 *.out
 *.app
+
+# Others
+__pycache__
+performance_regtest_results.py
