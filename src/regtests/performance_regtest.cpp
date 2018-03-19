@@ -10,16 +10,16 @@ TEST(PerformanceTest, PerformanceTestAlloc) {
 	ASSERT_TRUE(bufferPool.create(BufferPoolConfig{1024*1024}, "./test.db", FileStorageConfig{64}, true) == ErrorCode::E_NO_ERROR);
 	BufferHandler bufferHandler;
 
-	double duration;
-	std::clock_t start = std::clock();
+	auto start = std::chrono::system_clock::now();
 
 	for (uint64_t i = 0; i < 4*1024*1024; i += 64) {
 		ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
 		ASSERT_TRUE(bufferPool.unpin(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR);
 	}
 
-	duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-	std::cout << "alloc_regtest = " << duration << std::endl;
+	auto end = std::chrono::system_clock::now();
+	std::chrono::duration<double> elapsed_seconds = end-start;
+	std::cout << "alloc_regtest = " << 4/elapsed_seconds.count() << std::endl;
 }
 
 /**
@@ -39,8 +39,7 @@ TEST(PerformanceTest, PerformanceTestScan) {
 		pages.push_back(bufferHandler.m_pId);
 	}
 
-	double duration;
-	std::clock_t start = std::clock();
+	auto start = std::chrono::system_clock::now();
 
 	for (uint64_t i = 0; i < 4*1024*1024; i += 64) {
 		ASSERT_TRUE(bufferPool.pin(pages[i/64], &bufferHandler) == ErrorCode::E_NO_ERROR);
@@ -50,8 +49,9 @@ TEST(PerformanceTest, PerformanceTestScan) {
 		ASSERT_TRUE(bufferPool.unpin(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR);
 	}
 
-	duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-	std::cout << "scan_regtest = " << duration << std::endl;
+	auto end = std::chrono::system_clock::now();
+	std::chrono::duration<double> elapsed_seconds = end-start;
+	std::cout << "scan_regtest = " << 4/elapsed_seconds.count() << std::endl;
 }
 
 SMILE_NS_END

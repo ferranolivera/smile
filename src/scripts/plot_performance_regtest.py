@@ -8,6 +8,6 @@ y_pos = np.arange(len(objects))
 
 plt.bar(y_pos, values, align="center")
 plt.xticks(y_pos, objects)
-plt.ylabel("Time (s)")
-plt.title(" Execution time of Buffer Pool operations")
+plt.ylabel("Bandwidth (GB/s)")
+plt.title(" Bandwidth of Buffer Pool's operations")
 plt.show()
