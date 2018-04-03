@@ -25,3 +25,4 @@ SET(SMILE_LIBRARIES base storage memory tasking data ${Boost_LIBRARIES})
 SET(SMILE_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/src)
 
 add_subdirectory(tests)
+add_subdirectory(regtests)
