@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <memory/buffer_pool.h>
+#include <tasking/tasking.h>
 #include <thread>
 
 SMILE_NS_BEGIN
@@ -52,6 +53,8 @@ TEST(BufferPoolTest, BufferPoolAlloc) {
  * P to bring it back to main memory and check that the data we have written still persists.
  */
 TEST(BufferPoolTest, BufferPoolPinAndWritePage) {
+  startThreadPool(1);
+
   BufferPool bufferPool;
   ASSERT_TRUE(bufferPool.create(BufferPoolConfig{256}, "./test.db", FileStorageConfig{64}, true) == ErrorCode::E_NO_ERROR);
   BufferHandler bufferHandler;
@@ -102,6 +105,8 @@ TEST(BufferPoolTest, BufferPoolPinAndWritePage) {
   {
     ASSERT_TRUE(dataW[i] == dataR[i]);
   }
+
+  stopThreadPool();
 }
 
 /**
@@ -121,19 +126,19 @@ TEST(BufferPoolTest, BufferPoolErrors) {
   ASSERT_TRUE(bufferPool.release(1) == ErrorCode::E_NO_ERROR);
 
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
-  ASSERT_TRUE(bufferHandler.m_bId == 0);
-  ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler.m_bId == 1);
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler.m_bId == 2);
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler.m_bId == 3);
+  ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(bufferHandler.m_bId == 0);
 
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_BUFPOOL_OUT_OF_MEMORY);
 
   ASSERT_TRUE(bufferPool.release(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
-  ASSERT_TRUE(bufferHandler.m_bId == 3);
+  ASSERT_TRUE(bufferHandler.m_bId == 0);
 
   ASSERT_TRUE(bufferPool.close() == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferPool.open(BufferPoolConfig{257}, "./test.db") == ErrorCode::E_BUFPOOL_POOL_SIZE_NOT_MULTIPLE_OF_PAGE_SIZE);

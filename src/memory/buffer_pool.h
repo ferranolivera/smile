@@ -6,7 +6,9 @@
 
 #include <map>
 #include <list>
+#include <queue>
 #include <mutex>
+#include <shared_mutex>
 #include "../base/platform.h"
 #include "../storage/file_storage.h"
 #include "types.h"
@@ -14,6 +16,8 @@
 
 
 SMILE_NS_BEGIN
+
+#define PREFETCH_DEGREE 1
 
 struct BufferPoolConfig {
     /**
@@ -63,6 +67,11 @@ struct BufferDescriptor {
      * pageId_t on disk of the loaded page.
      */
     pageId_t    m_pageId        = 0;
+
+    /**
+     * Lock to isolate descriptor's modifications.
+     */
+    std::unique_ptr<std::shared_timed_mutex> m_contentLock = nullptr;
 };
 
 struct BufferPoolStatistics {
@@ -139,7 +148,7 @@ class BufferPool {
      * @param bufferHandler BufferHandler for the pinned page.
      * @return false if the pin was successful, true otherwise.
      */
-    ErrorCode pin( const pageId_t& pId, BufferHandler* bufferHandler ) noexcept;
+    ErrorCode pin( const pageId_t& pId, BufferHandler* bufferHandler, bool enablePrefetch = true ) noexcept;
 
     /**
      * Unpins a page.
@@ -218,7 +227,7 @@ class BufferPool {
      * 
      * @return false if the table is stored without issues, true otherwise.
      */
-    ErrorCode storeAllocationTable() noexcept;
+    ErrorCode storeAllocationTable();
 
     /**
      * Returns whether a page is protected (used for storing DB state) or not.
@@ -266,6 +275,11 @@ class BufferPool {
     std::list<pageId_t> m_freePages;
 
     /**
+     * Queue of free (no page associated to them) buffers.
+     */
+    std::queue<bufferId_t> m_freeBuffers;
+
+    /**
      * Maps pageId_t with its bufferId_t in case it is currently in the Buffer Pool. 
      */
     std::map<pageId_t, bufferId_t> m_bufferToPageMap;
@@ -278,7 +292,7 @@ class BufferPool {
     /**
      * Global lock to isolate concurrent operations by different threads.
      */
-    std::mutex m_globalLoc;
+    mutable std::shared_timed_mutex m_globalLock;
 };
 
 SMILE_NS_END

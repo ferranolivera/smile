@@ -2,11 +2,13 @@
 #include <gtest/gtest.h>
 #include <data/schema.h>
 #include <memory/buffer_pool.h>
+#include <tasking/tasking.h>
 #include <sstream>
 
 SMILE_NS_BEGIN
 
 TEST(SchemaTest, SchemaPersistence) {
+  startThreadPool(1);
 
   BufferPool bufferPool;
   ASSERT_TRUE(bufferPool.create(BufferPoolConfig{256}, "./test.db", FileStorageConfig{4}, true) == ErrorCode::E_NO_ERROR);
@@ -49,6 +51,8 @@ TEST(SchemaTest, SchemaPersistence) {
     ASSERT_TRUE(nodeInfo.m_typeId == i);
   } 
   ASSERT_TRUE(schema.persistSchema() == ErrorCode::E_NO_ERROR);
+
+  stopThreadPool();
 
   ASSERT_TRUE(bufferPool.close() == ErrorCode::E_NO_ERROR);
 }
