@@ -8,9 +8,9 @@ SMILE_NS_BEGIN
 #define DATA_KB 4*1024*1024
 
 /**
- * Tests a scan operation of 4GB over a 1GB-size Buffer Pool for benchmarking purposes.
+ * Tests a Group By operation of 4GB over a 1GB-size Buffer Pool for benchmarking purposes.
  */
-TEST(PerformanceTest, PerformanceTestScan) {
+TEST(PerformanceTest, PerformanceTestGroupBy) {
 	if (std::ifstream("./test.db")) {
 		startThreadPool(1);
 
@@ -19,13 +19,29 @@ TEST(PerformanceTest, PerformanceTestScan) {
 		BufferHandler bufferHandler;
 
 		uint64_t page = 0;
-		std::vector<uint64_t> dummy(PAGE_SIZE_KB*1024*8/64);
 
-		// Scan operation
+		// GroupBy operation
 		for (uint64_t i = 0; i < DATA_KB; i += PAGE_SIZE_KB) {
 			if ( page%(PAGE_SIZE_KB*1024*8) == 0 ) ++page;
 			ASSERT_TRUE(bufferPool.pin(page, &bufferHandler) == ErrorCode::E_NO_ERROR);
-			memcpy(&dummy[0], bufferHandler.m_buffer, PAGE_SIZE_KB*1024);
+			
+			std::map<uint8_t, uint16_t> occurrencesMap;
+			uint8_t* buffer = reinterpret_cast<uint8_t*>(bufferHandler.m_buffer);
+			for (uint64_t byte = 0; byte < PAGE_SIZE_KB*1024; ++byte) {
+				uint8_t number = *buffer;
+				std::map<uint8_t, uint16_t>::iterator it;
+				it = occurrencesMap.find(number);
+
+				if (it == occurrencesMap.end()) {
+					occurrencesMap.insert(std::pair<uint8_t,uint16_t>(number,1));
+				}
+				else {
+					++it->second;
+				}
+
+				++buffer;
+			}
+
 			ASSERT_TRUE(bufferPool.unpin(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR);
 			++page;
 		}
