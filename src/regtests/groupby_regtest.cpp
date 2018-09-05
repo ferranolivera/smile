@@ -6,8 +6,8 @@
 SMILE_NS_BEGIN
 
 #define PAGE_SIZE_KB 64
-#define DATA_KB 4*1024*1024
-#define NUM_THREADS 4
+#define DATA_KB 1*1024*1024
+#define NUM_THREADS 1
 
 /**
  * Tests a Group By operation of 4GB over a 1GB-size Buffer Pool for benchmarking purposes.
@@ -49,7 +49,7 @@ TEST(PerformanceTest, PerformanceTestGroupBy) {
 					++buffer;
 				}
 
-				bufferPool.unpin(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR;
+				bufferPool.unpin(bufferHandler.m_pId);
 			}
 		}	
 
@@ -71,6 +71,7 @@ TEST(PerformanceTest, PerformanceTestGroupBy) {
 			}
 		}
 
+    bufferPool.close();
 		stopThreadPool();
 	}
 }

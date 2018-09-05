@@ -96,6 +96,7 @@ TEST(PerformanceTest, PerformanceTestHashJoin) {
 
 		#pragma omp barrier
 
+    bufferPool.close();
 		stopThreadPool();
 	}
 }
