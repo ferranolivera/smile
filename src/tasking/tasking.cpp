@@ -153,6 +153,7 @@ void stopThreadPool() noexcept {
   // Waitning threads to stop
   for(std::size_t i = 0; i < m_numThreads; ++i) {
     p_threads[i]->join();
+    delete p_threads[i];
   }
 
   delete [] p_threads;
