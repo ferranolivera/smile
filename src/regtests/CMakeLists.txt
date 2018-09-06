@@ -3,6 +3,8 @@ include_directories(${SMILE_INCLUDE_DIR})
 
 include_directories(${GTEST_INCLUDE_DIRS})
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+
 function(create_regtest NAME)
   add_executable(${NAME}
     ${NAME}.cpp
@@ -17,11 +19,12 @@ function(create_regtest NAME)
     )
 endfunction(create_regtest)
 
-SET(TESTS "alloc_regtest" "groupby_regtest" "hashjoin_regtest" "scan_regtest" "loadgraph_regtest" "bfsgraph_regtest")
+SET(TESTS "alloc_regtest" "groupby_array_regtest" "groupby_regtest" "hashjoin_regtest" "scan_regtest" "loadgraph_regtest" "bfsgraph_regtest")
 
 foreach( TEST ${TESTS} )
   create_regtest(${TEST})
 endforeach( TEST )
+
 
 add_custom_target(regtests COMMAND ${CMAKE_CTEST_COMMAND}
   DEPENDS ${TESTS})
