@@ -2,19 +2,20 @@
 #include <memory/buffer_pool.h>
 #include <tasking/tasking.h>
 #include <omp.h>
+#include <unordered_map>
 
 SMILE_NS_BEGIN
 
 #define PAGE_SIZE_KB 64
 #define DATA_KB 1*1024*1024
-#define NUM_THREADS 2
+#define NUM_THREADS 1
 
 /**
  * Tests a Group By operation of 4GB over a 1GB-size Buffer Pool for benchmarking purposes.
  */
 TEST(PerformanceTest, PerformanceTestGroupBy) {
 	if (std::ifstream("./test.db")) {
-		startThreadPool(NUM_THREADS);
+		startThreadPool(1);
 
 		BufferPool bufferPool;
     BufferPoolConfig bpConfig;
@@ -23,7 +24,7 @@ TEST(PerformanceTest, PerformanceTestGroupBy) {
 		ASSERT_TRUE(bufferPool.open(bpConfig, "./test.db") == ErrorCode::E_NO_ERROR);
 		BufferHandler bufferHandler;
 
-		std::array<std::map<uint8_t,uint16_t>,NUM_THREADS> occurrencesMap;
+		std::array<std::unordered_map<uint8_t,uint32_t>,NUM_THREADS> occurrencesMap;
 
 		// GroupBy operation
 		#pragma omp parallel num_threads(NUM_THREADS)
@@ -39,11 +40,11 @@ TEST(PerformanceTest, PerformanceTestGroupBy) {
 				uint8_t* buffer = reinterpret_cast<uint8_t*>(bufferHandler.m_buffer);
 				for (uint64_t byte = 0; byte < PAGE_SIZE_KB*1024; ++byte) {
 					uint8_t number = *buffer;
-					std::map<uint8_t, uint16_t>::iterator it;
+					std::unordered_map<uint8_t, uint32_t>::iterator it;
 					it = occurrencesMap[threadID].find(number);
 
 					if (it == occurrencesMap[threadID].end()) {
-						occurrencesMap[threadID].insert(std::pair<uint8_t,uint16_t>(number,1));
+						occurrencesMap[threadID].insert(std::pair<uint8_t,uint32_t>(number,1));
 					}
 					else {
 						++it->second;
@@ -60,9 +61,9 @@ TEST(PerformanceTest, PerformanceTestGroupBy) {
 
 		// Final aggregate
 		for (uint64_t i = 1; i < NUM_THREADS; ++i) {
-			std::map<uint8_t, uint16_t>::iterator it = occurrencesMap[i].begin();
+			std::unordered_map<uint8_t, uint32_t>::iterator it = occurrencesMap[i].begin();
 			while ( it != occurrencesMap[i].end()) {
-				std::map<uint8_t, uint16_t>::iterator it2;
+				std::unordered_map<uint8_t, uint32_t>::iterator it2;
 				it2 = occurrencesMap[0].find(it->first);
 				if (it2 == occurrencesMap[0].end()) {
 					occurrencesMap[0].insert(std::pair<uint8_t,uint16_t>(it->first,it->second));
