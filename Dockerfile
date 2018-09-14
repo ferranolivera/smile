@@ -8,6 +8,7 @@ WORKDIR /home/user
 ADD src ./src 
 ADD CMakeLists.txt ./
 ADD libs ./libs 
+ADD cmake ./cmake 
 
 RUN mkdir build 
 
