@@ -32,7 +32,7 @@ struct BufferPoolConfig {
     /**
      * Number of partitions of the buffer pool.
      */
-    uint8_t m_numberOfPartitions = 16;
+    uint32_t m_numberOfPartitions = 16;
 };
 
 struct BufferHandler {
@@ -54,10 +54,6 @@ struct BufferHandler {
 
 struct BufferDescriptor {
     /**
-     * Whether a buffer slot is currently being used or not.
-     */
-    bool        m_inUse         = false;
-    /**
      * Number of current references of the page.
      */
     uint64_t    m_referenceCount = 0;
@@ -68,14 +64,19 @@ struct BufferDescriptor {
     uint64_t    m_usageCount    = 0;
 
     /**
+     * pageId_t on disk of the loaded page.
+     */
+    pageId_t    m_pageId        = 0;
+
+    /**
      * Whether the buffer is dirty or not.
      */
     bool        m_dirty         = false;
 
     /**
-     * pageId_t on disk of the loaded page.
+     * Whether a buffer slot is currently being used or not.
      */
-    pageId_t    m_pageId        = 0;
+    bool        m_inUse         = false;
 
     /**
      * Lock to isolate descriptor's modifications.
@@ -218,7 +219,7 @@ class BufferPool {
      * @param partition Buffer pool partition where to search for an empty slot.
      * @return false if all pages are pinned, true otherwise.
      */
-    ErrorCode getEmptySlot( bufferId_t* bId, uint8_t partition );
+    ErrorCode getEmptySlot( bufferId_t* bId, uint32_t partition );
 
     /**
      * Returns the pageId_t of an empty page. A boolean is returned indicating
@@ -307,7 +308,9 @@ class BufferPool {
          * Partition lock to isolate concurrent operations by different threads.
          */
         std::unique_ptr<std::mutex> p_lock;
+
     };
+
     std::vector<Partition> m_partitions;
 
     /**

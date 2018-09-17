@@ -43,11 +43,11 @@ ErrorCode BufferPool::open( const BufferPoolConfig& bpConfig, const std::string&
 		uint32_t numaNodes = numa_max_node() + 1;
 		m_descriptors.resize(poolElems);
 		for (uint32_t i = 0; i < poolElems; ++i) {
-			uint8_t part = i % m_config.m_numberOfPartitions;
+			uint32_t part = i % m_config.m_numberOfPartitions;
 			m_partitions[part].m_freeBuffers.push(i);
 			m_descriptors[i].m_contentLock = std::make_unique<std::shared_timed_mutex>();
 			// Depending on the partition, buffers are allocated into different numa nodes
-			uint8_t node = part % numaNodes;
+			uint32_t node = part % numaNodes;
 #ifdef NUMA
 			m_descriptors[i].p_buffer = (char*) numa_alloc_onnode( pageSizeKB*1024, node);
 #else
@@ -94,11 +94,11 @@ ErrorCode BufferPool::create( const BufferPoolConfig& bpConfig, const std::strin
 		uint32_t numaNodes = numa_max_node() + 1;
 		m_descriptors.resize(poolElems);
 		for (uint32_t i = 0; i < poolElems; ++i) {
-			uint8_t part = i % m_config.m_numberOfPartitions;
+			uint32_t part = i % m_config.m_numberOfPartitions;
 			m_partitions[part].m_freeBuffers.push(i);
 			m_descriptors[i].m_contentLock = std::make_unique<std::shared_timed_mutex>();
 			// Depending on the partition, buffers are allocated into different numa nodes
-			uint8_t node = part % numaNodes;
+			uint32_t node = part % numaNodes;
 #ifdef NUMA
 			m_descriptors[i].p_buffer = (char*) numa_alloc_onnode( pageSizeKB*1024, node);
 #else
@@ -163,7 +163,7 @@ ErrorCode BufferPool::alloc( BufferHandler* bufferHandler ) noexcept {
 		partitionGuards.clear();
 
 		// Take the lock of the partition
-		uint8_t part = pId % m_config.m_numberOfPartitions;
+		uint32_t part = pId % m_config.m_numberOfPartitions;
 		std::unique_lock<std::mutex> partitionGuard(*m_partitions[part].p_lock);		
 		// Get an empty buffer pool slot for the page and update the buffer table.
 		getEmptySlot(&bId, part);
@@ -194,7 +194,7 @@ ErrorCode BufferPool::release( const pageId_t& pId ) noexcept {
 		assert(!isProtected(pId) && "Unable to access protected page");
 
 		// Take the lock of the partition
-		uint8_t part = pId % m_config.m_numberOfPartitions;
+		uint32_t part = pId % m_config.m_numberOfPartitions;
 		std::unique_lock<std::mutex> partitionGuard(*m_partitions[part].p_lock);
 
 		// Evict the page in case it is in the Buffer Pool
@@ -240,7 +240,7 @@ ErrorCode BufferPool::pin( const pageId_t& pId, BufferHandler* bufferHandler, bo
 		assert(!isProtected(pId) && "Unable to access protected page");
 
 		// Take the lock of the partition
-		uint8_t part = pId % m_config.m_numberOfPartitions;
+		uint32_t part = pId % m_config.m_numberOfPartitions;
 		std::unique_lock<std::mutex> partitionGuard(*m_partitions[part].p_lock);
 
 		bufferId_t bId;
@@ -320,7 +320,7 @@ ErrorCode BufferPool::unpin( const pageId_t& pId ) noexcept {
 		assert(!isProtected(pId) && "Unable to access protected page");
 
 		// Take the lock of the partition
-		uint8_t part = pId % m_config.m_numberOfPartitions;
+		uint32_t part = pId % m_config.m_numberOfPartitions;
 		std::unique_lock<std::mutex> partitionGuard(*m_partitions[part].p_lock);
 
 		// Decrement page's reference count.
@@ -359,7 +359,7 @@ ErrorCode BufferPool::checkpoint() noexcept {
 ErrorCode BufferPool::setPageDirty( const pageId_t& pId ) noexcept {
 	try {
 		// Take the lock of the partition
-		uint8_t part = pId % m_config.m_numberOfPartitions;
+		uint32_t part = pId % m_config.m_numberOfPartitions;
 		std::unique_lock<std::mutex> partitionGuard(*m_partitions[part].p_lock);
 
 		auto it = m_partitions[part].m_bufferToPageMap.find(pId);
@@ -411,7 +411,7 @@ ErrorCode BufferPool::checkConsistency() {
 
 		for (uint64_t i = 0; i < m_allocationTable.size(); ++i) {
 			// Take the lock of the partition
-			uint8_t part = i % m_config.m_numberOfPartitions;
+			uint32_t part = i % m_config.m_numberOfPartitions;
 			auto itFreePages = std::find(m_partitions[part].m_freePages.begin(), m_partitions[part].m_freePages.end(), i);
 			auto itBuffer = m_partitions[part].m_bufferToPageMap.find(reinterpret_cast<pageId_t>(i));
 
@@ -447,7 +447,7 @@ ErrorCode BufferPool::checkConsistency() {
 	} 
 }
 
-ErrorCode BufferPool::getEmptySlot( bufferId_t* bId, uint8_t partition ) {
+ErrorCode BufferPool::getEmptySlot( bufferId_t* bId, uint32_t partition ) {
 	bool found = false;
 
 	// Look for an empty Buffer Pool slot.
@@ -508,7 +508,7 @@ ErrorCode BufferPool::getEmptySlot( bufferId_t* bId, uint8_t partition ) {
 
 bool BufferPool::getFreePage(pageId_t* pId) noexcept {
 	bool found = false;
-	for (uint8_t p = 0; p < m_config.m_numberOfPartitions && !found; ++p) {
+	for (uint32_t p = 0; p < m_config.m_numberOfPartitions && !found; ++p) {
 		if ( !m_partitions[p].m_freePages.empty() ) {
 			found = true;
 			*pId = m_partitions[p].m_freePages.front();
@@ -525,7 +525,7 @@ ErrorCode BufferPool::reservePages( const uint32_t& numPages, pageId_t* pId ) no
 	// Add reserved pages to free list and increment the Allocation Table size to fit the new pages.
 	for (uint64_t i = 0; i < numPages; ++i) {
 		uint64_t page = (*pId)+i;
-		uint8_t part = page % m_config.m_numberOfPartitions;
+		uint32_t part = page % m_config.m_numberOfPartitions;
 		if (!isProtected(page)) {
 			m_partitions[part].m_freePages.push_back(page);	
 		} 
@@ -537,7 +537,7 @@ ErrorCode BufferPool::reservePages( const uint32_t& numPages, pageId_t* pId ) no
 		pageId_t pIdToReturn = (*pId) + 1;
 
 		m_storage.reserve(1, pId);
-		uint8_t part = *pId % m_config.m_numberOfPartitions;
+		uint32_t part = *pId % m_config.m_numberOfPartitions;
 		m_partitions[part].m_freePages.push_back(*pId);
 		m_allocationTable.push_back(0);
 
@@ -569,7 +569,7 @@ ErrorCode BufferPool::loadAllocationTable() noexcept {
     // Add the unallocated pages to the free list
     for (uint64_t i = 0; i < m_allocationTable.size(); ++i) {
     	if (!m_allocationTable.test(i) && !isProtected(i)) {
-    		uint8_t part = i % m_config.m_numberOfPartitions;
+    		uint32_t part = i % m_config.m_numberOfPartitions;
     		m_partitions[i].m_freePages.push_back(i);
     	}
     }
