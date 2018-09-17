@@ -46,7 +46,11 @@ ErrorCode BufferPool::open( const BufferPoolConfig& bpConfig, const std::string&
 			m_descriptors[i].m_contentLock = std::make_unique<std::shared_timed_mutex>();
 			// Depending on the partition, buffers are allocated into different numa nodes
 			uint8_t node = part % numaNodes;
+#ifdef NUMA
 			m_descriptors[i].p_buffer = (char*) numa_alloc_onnode( pageSizeKB*1024, node);
+#else
+			m_descriptors[i].p_buffer = new char[pageSizeKB*1024];
+#endif
 		}
 		m_nextCSVictim = 0;
 		m_currentThread = 0;
@@ -93,7 +97,11 @@ ErrorCode BufferPool::create( const BufferPoolConfig& bpConfig, const std::strin
 			m_descriptors[i].m_contentLock = std::make_unique<std::shared_timed_mutex>();
 			// Depending on the partition, buffers are allocated into different numa nodes
 			uint8_t node = part % numaNodes;
+#ifdef NUMA
 			m_descriptors[i].p_buffer = (char*) numa_alloc_onnode( pageSizeKB*1024, node);
+#else
+			m_descriptors[i].p_buffer = new char[pageSizeKB*1024];
+#endif
 		}
 		m_nextCSVictim = 0;
 		m_currentThread = 0;
@@ -113,7 +121,11 @@ ErrorCode BufferPool::close() noexcept {
 		storeAllocationTable();
 
 		for (int i = 0; i < m_descriptors.size(); ++i) {
+#ifdef NUMA
 			numa_free(m_descriptors[i].p_buffer, m_storage.getPageSize());
+#else
+      delete [] m_descriptors[i].p_buffer;
+#endif
 		}
 
 		m_storage.close();
