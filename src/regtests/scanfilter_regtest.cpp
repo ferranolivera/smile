@@ -3,30 +3,19 @@
 #include <tasking/tasking.h>
 #include <omp.h>
 #include <numa.h>
+#include <chrono>
 
 SMILE_NS_BEGIN
 
 #define PAGE_SIZE_KB 64
 #define DATA_KB 1*1024*1024
-#define NUM_THREADS 1
+#define NUM_THREADS 2
 
-/**
- * Tests a scan operation which filters the values found in a set of pages for benchmarking purposes.
- */
-TEST(PerformanceTest, PerformanceTestScanFilter) {
-	if (std::ifstream("./test.db")) {
-		startThreadPool(0);
-
-		BufferPool bufferPool;
-		BufferPoolConfig bpConfig;
-		bpConfig.m_poolSizeKB = 1024*1024;
-		bpConfig.m_prefetchingDegree = 0;
-		bpConfig.m_numberOfPartitions = 128;
-		ASSERT_TRUE(bufferPool.open(bpConfig, "./test.db") == ErrorCode::E_NO_ERROR);
-
+inline void run(BufferPool& bufferPool) {
 		uint32_t threshold = 2^32/2;
 		uint32_t counter = 0;
-		std::array<uint32_t,NUM_THREADS> partialCounter;
+    constexpr int32_t PADDING_FACTOR=16;
+		std::array<uint32_t,NUM_THREADS*PADDING_FACTOR> partialCounter;
 		const uint64_t numaNodes = numa_max_node() + 1;
 		ASSERT_TRUE(NUM_THREADS >= numaNodes && NUM_THREADS % numaNodes == 0);
 
@@ -46,8 +35,8 @@ TEST(PerformanceTest, PerformanceTestScanFilter) {
 				uint32_t* buffer = reinterpret_cast<uint32_t*>(bufferHandler.m_buffer);
 				for (uint64_t byte = 0; byte < PAGE_SIZE_KB*1024; byte += 4) {
 					uint32_t number = *buffer;
-					if (number > threshold) {
-						++partialCounter[threadID];
+					/*if (number > threshold) */ {
+						++partialCounter[threadID*PADDING_FACTOR];
 					}
 					++buffer;
 				}
@@ -55,13 +44,36 @@ TEST(PerformanceTest, PerformanceTestScanFilter) {
 				bufferPool.unpin(bufferHandler.m_pId);
 			}
 		}
-
 		#pragma omp barrier
 
 		// Final aggregate
 		for (uint64_t i = 1; i < NUM_THREADS; ++i) {
 			counter += partialCounter[i];
 		}
+}
+
+/**
+ * Tests a scan operation which filters the values found in a set of pages for benchmarking purposes.
+ */
+TEST(PerformanceTest, PerformanceTestScanFilter) {
+	if (std::ifstream("./test.db")) {
+		startThreadPool(0);
+
+		BufferPool bufferPool;
+		BufferPoolConfig bpConfig;
+		bpConfig.m_poolSizeKB = 1024*1024;
+		bpConfig.m_prefetchingDegree = 0;
+		bpConfig.m_numberOfPartitions = 128;
+		ASSERT_TRUE(bufferPool.open(bpConfig, "./test.db") == ErrorCode::E_NO_ERROR);
+
+    int num_iters= 10;
+    run(bufferPool);
+    std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+    for(int i = 0; i < num_iters; ++i) {
+      run(bufferPool);
+    }
+    std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+    std::cout << "Execution time: " << std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count() << std::endl;
 
 		stopThreadPool();
     	bufferPool.close();
