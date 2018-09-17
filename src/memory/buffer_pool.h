@@ -211,6 +211,8 @@ class BufferPool {
 
   private:
 
+    void allocatePartitions();
+
     /**
      * Returns the bufferId_t of an empty buffer pool slot. In case none is free
      * Clock Sweep algorithm is performed to evict a page.
@@ -322,6 +324,9 @@ class BufferPool {
      * ID of the next thread used for prefetching.
      */
     uint16_t m_currentThread;    
+
+    uint32_t m_numaNodes;
+    char**   p_buffersData;
 };
 
 SMILE_NS_END
