@@ -30,9 +30,11 @@ ErrorCode BufferPool::open( const BufferPoolConfig& bpConfig, const std::string&
 			throw ErrorCode::E_BUFPOOL_NO_THREADS_AVAILABLE_FOR_PREFETCHING;
 		}
 
+#ifdef NUMA
 		if ( numa_available() < 0 ) {
 			throw ErrorCode::E_BUFPOOL_NUMA_API_NOT_SUPPORTED;
 		}
+#endif
 
 		m_storage.open(path);
 		m_config = bpConfig;
