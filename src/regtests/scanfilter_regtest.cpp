@@ -9,7 +9,7 @@ SMILE_NS_BEGIN
 
 #define PAGE_SIZE_KB 64
 #define DATA_KB 1*1024*1024
-#define NUM_THREADS 2
+#define NUM_THREADS 1
 
 inline void run(BufferPool& bufferPool) {
 		uint32_t threshold = 2^32/2;
@@ -17,12 +17,12 @@ inline void run(BufferPool& bufferPool) {
     constexpr int32_t PADDING_FACTOR=16;
 		std::array<uint32_t,NUM_THREADS*PADDING_FACTOR> partialCounter;
 		const uint64_t numaNodes = numa_max_node() + 1;
-		ASSERT_TRUE(NUM_THREADS >= numaNodes && NUM_THREADS % numaNodes == 0);
+		//ASSERT_TRUE(NUM_THREADS >= numaNodes && NUM_THREADS % numaNodes == 0);
 
 		// Scan Filter operation
 		#pragma omp parallel num_threads(NUM_THREADS)
 		{
-			uint64_t threadID = omp_get_thread_num();
+			/*uint64_t threadID = omp_get_thread_num();
 			uint64_t numThreads = omp_get_num_threads();
 			uint64_t KBRangePerThread = DATA_KB/(numThreads/numaNodes);
 			uint64_t startingKB = KBRangePerThread*(threadID/numaNodes) + PAGE_SIZE_KB*(threadID%numaNodes);
@@ -35,7 +35,29 @@ inline void run(BufferPool& bufferPool) {
 				uint32_t* buffer = reinterpret_cast<uint32_t*>(bufferHandler.m_buffer);
 				for (uint64_t byte = 0; byte < PAGE_SIZE_KB*1024; byte += 4) {
 					uint32_t number = *buffer;
-					/*if (number > threshold) */ {
+					if (number > threshold)  {
+						++partialCounter[threadID*PADDING_FACTOR];
+					}
+					++buffer;
+				}
+
+				bufferPool.unpin(bufferHandler.m_pId);
+			}*/
+
+			uint64_t threadID = omp_get_thread_num();
+			uint64_t numThreads = omp_get_num_threads();
+			uint64_t numPages = DATA_KB / PAGE_SIZE_KB;
+			uint64_t startingPage = threadID;
+			BufferHandler bufferHandler;
+
+			for (uint64_t i = startingPage; i < numPages; i += numThreads) {
+				uint64_t page = i;
+				bufferPool.pin(page, &bufferHandler);
+				
+				uint32_t* buffer = reinterpret_cast<uint32_t*>(bufferHandler.m_buffer);
+				for (uint64_t byte = 0; byte < PAGE_SIZE_KB*1024; byte += 4) {
+					uint32_t number = *buffer;
+					if (number > threshold)  {
 						++partialCounter[threadID*PADDING_FACTOR];
 					}
 					++buffer;
