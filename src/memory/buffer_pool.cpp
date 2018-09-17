@@ -10,9 +10,42 @@
 SMILE_NS_BEGIN
 
 BufferPool::BufferPool() noexcept {	
+  p_buffersData = nullptr;
 }
 
 void BufferPool::allocatePartitions() {
+
+		uint32_t pageSizeKB = m_storage.getPageSize() / 1024;
+		uint32_t poolElems = m_config.m_poolSizeKB / pageSizeKB;
+
+    p_buffersData = new char*[m_numaNodes];
+    size_t sizePerNode = m_config.m_poolSizeKB*1024 / m_numaNodes;
+    for(uint32_t i = 0; i < m_numaNodes; ++i) {
+#ifdef NUMA
+			p_buffersData[i] = (char*) numa_alloc_onnode( sizePerNode, i);
+#else
+      p_buffersData[i] = new char[sizePerNode];
+      memset(p_buffersData[i], '0', sizePerNode);
+      assert(p_buffersData[i] != nullptr && "Unable to allocate memory buffer");
+#endif
+    }
+
+		m_descriptors.resize(poolElems);
+		for (uint32_t i = 0; i < poolElems; ++i) {
+			uint32_t part = i % m_config.m_numberOfPartitions;
+			m_partitions[part].m_freeBuffers.push(i);
+			m_descriptors[i].m_contentLock = std::make_unique<std::shared_timed_mutex>();
+			// Depending on the partition, buffers are allocated into different numa nodes
+			uint32_t node = part % m_numaNodes;
+      char* buffer = p_buffersData[node];
+			m_descriptors[i].p_buffer = buffer + sizeof(char)*(pageSizeKB*1024)*i/m_numaNodes;
+		}
+}
+
+ErrorCode BufferPool::open( const BufferPoolConfig& bpConfig, const std::string& path ) {
+	try {
+
+		m_config = bpConfig;
 
 		// Before continuing we need to make sure that no operations are being performed
 		m_partitions.resize(m_config.m_numberOfPartitions);
@@ -21,27 +54,6 @@ void BufferPool::allocatePartitions() {
 			 m_partitions[i].p_lock = std::make_unique<std::mutex>();
 			 partitionGuards.push_back( std::unique_lock<std::mutex>(*m_partitions[i].p_lock) );
 		}
-
-		uint32_t pageSizeKB = m_storage.getPageSize() / 1024;
-		uint32_t poolElems = m_config.m_poolSizeKB / pageSizeKB;
-		m_descriptors.resize(poolElems);
-		for (uint32_t i = 0; i < poolElems; ++i) {
-			uint32_t part = i % m_config.m_numberOfPartitions;
-			m_partitions[part].m_freeBuffers.push(i);
-			m_descriptors[i].m_contentLock = std::make_unique<std::shared_timed_mutex>();
-			// Depending on the partition, buffers are allocated into different numa nodes
-			uint32_t node = part % m_numaNodes;
-#ifdef NUMA
-			m_descriptors[i].p_buffer = (char*) numa_alloc_onnode( pageSizeKB*1024, node);
-#else
-			m_descriptors[i].p_buffer = new char[pageSizeKB*1024];
-#endif
-      assert(m_descriptors[i].pbuffer != nullptr && "Unable to allocate memory buffer");
-		}
-}
-
-ErrorCode BufferPool::open( const BufferPoolConfig& bpConfig, const std::string& path ) {
-	try {
 
 		if ( bpConfig.m_poolSizeKB % (m_storage.getPageSize()/1024) != 0 ) {
 			throw ErrorCode::E_BUFPOOL_POOL_SIZE_NOT_MULTIPLE_OF_PAGE_SIZE;
@@ -60,7 +72,6 @@ ErrorCode BufferPool::open( const BufferPoolConfig& bpConfig, const std::string&
 #endif
 
 		m_storage.open(path);
-		m_config = bpConfig;
 
     allocatePartitions();
 
@@ -78,11 +89,21 @@ ErrorCode BufferPool::open( const BufferPoolConfig& bpConfig, const std::string&
 ErrorCode BufferPool::create( const BufferPoolConfig& bpConfig, const std::string& path, const FileStorageConfig& fsConfig, const bool& overwrite ) {
 	try {
 
-		if ( bpConfig.m_poolSizeKB % fsConfig.m_pageSizeKB != 0 ) {
+		m_config = bpConfig;
+
+		// Before continuing we need to make sure that no operations are being performed
+		m_partitions.resize(m_config.m_numberOfPartitions);
+		std::vector<std::unique_lock<std::mutex>> partitionGuards;
+		for (uint32_t i = 0; i < m_config.m_numberOfPartitions; ++i) {
+			 m_partitions[i].p_lock = std::make_unique<std::mutex>();
+			 partitionGuards.push_back( std::unique_lock<std::mutex>(*m_partitions[i].p_lock) );
+		}
+
+		if ( m_config.m_poolSizeKB % fsConfig.m_pageSizeKB != 0 ) {
 			throw ErrorCode::E_BUFPOOL_POOL_SIZE_NOT_MULTIPLE_OF_PAGE_SIZE;
 		}
 
-		if ( getNumThreads() == 0 && bpConfig.m_prefetchingDegree > 0 ) {
+		if ( getNumThreads() == 0 && m_config.m_prefetchingDegree > 0 ) {
 			throw ErrorCode::E_BUFPOOL_NO_THREADS_AVAILABLE_FOR_PREFETCHING;
 		}
 
@@ -95,8 +116,9 @@ ErrorCode BufferPool::create( const BufferPoolConfig& bpConfig, const std::strin
 #endif
 
 		m_storage.create(path, fsConfig, overwrite);
-		m_config = bpConfig;
+
     allocatePartitions();
+
 		m_nextCSVictim = 0;
 		m_currentThread = 0;
 
@@ -114,13 +136,17 @@ ErrorCode BufferPool::close() noexcept {
 		// Save m_allocationTable state to disk.
 		storeAllocationTable();
 
-		for (int i = 0; i < m_descriptors.size(); ++i) {
+    size_t sizePerNode = m_config.m_poolSizeKB*1024 / m_numaNodes;
+    for(uint32_t i = 0; i < m_numaNodes; ++i) {
 #ifdef NUMA
-			numa_free(m_descriptors[i].p_buffer, m_storage.getPageSize());
+      numa_free(p_buffersData[i], sizePerNode);
 #else
-      delete [] m_descriptors[i].p_buffer;
+      char* buffer = p_buffersData[i];
+      delete [] buffer; 
 #endif
 		}
+
+    delete [] p_buffersData;
 
 		m_storage.close();
 

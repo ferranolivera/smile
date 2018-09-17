@@ -3,7 +3,7 @@ add_definitions(${DEFAULT_DEFINES})
 if (UNIX)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++14 -fno-rtti -fopenmp")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -pg -O0 -fopenmp")
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNDEBUG -fopenmp")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNUMA -g -ggdb -fopenmp")
 endif (UNIX)
 
 add_subdirectory(base)

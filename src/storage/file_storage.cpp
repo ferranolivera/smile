@@ -53,7 +53,7 @@ ErrorCode FileStorage::create( const std::string& path, const FileStorageConfig&
     throw ErrorCode::E_STORAGE_INVALID_PATH;
   }
 
-  m_configFile.open( path+".config", m_flags | std::ios_base::trunc );
+  m_configFile.open( path+std::string(".config"), m_flags | std::ios_base::trunc );
   if(!m_configFile) {
     throw ErrorCode::E_STORAGE_INVALID_PATH;
   }

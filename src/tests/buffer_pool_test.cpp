@@ -121,9 +121,9 @@ TEST(BufferPoolTest, BufferPoolPinAndWritePage) {
   ASSERT_TRUE(bufferPool.close() == ErrorCode::E_NO_ERROR);
 }
 
-/**
- * Tests that the Buffer Pool is properly reporting errors.
- **/
+///**
+// * Tests that the Buffer Pool is properly reporting errors.
+// **/
 TEST(BufferPoolTest, BufferPoolErrors) {
   startThreadPool(1);
   BufferPool bufferPool;
@@ -157,12 +157,13 @@ TEST(BufferPoolTest, BufferPoolErrors) {
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler.m_bId == 0);
 
+  stopThreadPool();
   ASSERT_TRUE(bufferPool.close() == ErrorCode::E_NO_ERROR);
+  startThreadPool(1);
   ASSERT_TRUE(bufferPool.open(BufferPoolConfig{257}, "./test.db") == ErrorCode::E_BUFPOOL_POOL_SIZE_NOT_MULTIPLE_OF_PAGE_SIZE);
   ASSERT_TRUE(bufferPool.create(BufferPoolConfig{257}, "./test.db", FileStorageConfig{64}, true) == ErrorCode::E_BUFPOOL_POOL_SIZE_NOT_MULTIPLE_OF_PAGE_SIZE);
 
   stopThreadPool();
-  ASSERT_TRUE(bufferPool.close() == ErrorCode::E_NO_ERROR);
 }
 
 /**
@@ -201,7 +202,7 @@ TEST(BufferPoolTest, BufferPoolPersistence) {
   ASSERT_TRUE(bufferHandler.m_pId == pagesToAlloc+2);
 
   stopThreadPool();
-  ASSERT_TRUE(bufferPool.close() == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(bufferPoolAux.close() == ErrorCode::E_NO_ERROR);
 }
 
 /**
@@ -295,6 +296,7 @@ TEST(BufferPoolTest, BufferPoolThreadSafe) {
   stopThreadPool();
   ASSERT_TRUE(bufferPool.close() == ErrorCode::E_NO_ERROR);
 }
+
 
 SMILE_NS_END
 
