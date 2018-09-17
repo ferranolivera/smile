@@ -53,6 +53,7 @@ ErrorCode BufferPool::open( const BufferPoolConfig& bpConfig, const std::string&
 #else
 			m_descriptors[i].p_buffer = new char[pageSizeKB*1024];
 #endif
+      assert(m_descriptors[i].pbuffer != nullptr && "Unable to allocate memory buffer");
 		}
 		m_nextCSVictim = 0;
 		m_currentThread = 0;
