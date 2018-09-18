@@ -27,20 +27,22 @@ class FileStorage {
      * @param in the path to the storage
      * @return true if the storage was opened correctly
      **/
-    ErrorCode open( const std::string& path );
+    ErrorCode open( const std::string& path ) noexcept;
 
     /**
      * Opens the file storage at the given path
      * @param in the path to the storage to create
      * @return in the configuration of the storage
      **/
-    ErrorCode create( const std::string& path, const FileStorageConfig& config, const bool& overwrite = false );
+    ErrorCode create( const std::string& path, 
+                      const FileStorageConfig& config, 
+                      const bool& overwrite = false ) noexcept;
 
     /**
      * Closes the storage
      * @return true if the closing was successful
      **/
-    ErrorCode close();
+    ErrorCode close() noexcept;
 
     /**
      * Reserve a set of pages
@@ -48,7 +50,8 @@ class FileStorage {
      * @param out pageId The first reserved pageId
      * @return false if there was an error. true otherwise
      **/
-    ErrorCode reserve( const uint32_t& numPages, pageId_t* pageId );
+    ErrorCode reserve( const uint32_t& numPages, 
+                       pageId_t* pageId ) noexcept;
 
     /**
      * Locks a pages into a buffer
@@ -56,7 +59,8 @@ class FileStorage {
      * @param in pageId The page to lock
      * @return false if the lock was not successful. true otherwise
      * */
-    ErrorCode read( char* data, const pageId_t& pageId );
+    ErrorCode read( char* data, 
+                    const pageId_t& pageId ) noexcept;
 
     /**
      * Unlocks the given page
@@ -64,7 +68,8 @@ class FileStorage {
      * @param in pageId The page to unlock
      * @return false if the unlock was unsuccessful. true otherwise.
      **/
-    ErrorCode write( const char* data, const pageId_t& pageId );
+    ErrorCode write( const char* data, 
+                     const pageId_t& pageId ) noexcept;
 
     /**
      * Gets the current size of the storage in pages
@@ -83,7 +88,7 @@ class FileStorage {
      *
      * @return The page size in bytes
      **/
-    uint32_t getPageSize() const noexcept;
+    size_t getPageSize() const noexcept;
 
   private:
 
@@ -110,16 +115,19 @@ class FileStorage {
     std::fstream    m_configFile;
 
     // The size of the file in pages;
-    pageId_t      m_size;
+    pageId_t        m_size;
 
     // The basic file modes
     std::ios_base::openmode m_flags;
 
     // A buffer used to initialize new pages in the file when it grows
-    std::vector<char>       m_pageFiller;
+    std::vector<char>  m_pageFiller;
 
     // The storage configuration data
     FileStorageConfig  m_config;
+
+    // Stores if the file storage was opened and needs to be closed
+    bool               m_opened;
 };
 
 SMILE_NS_END
