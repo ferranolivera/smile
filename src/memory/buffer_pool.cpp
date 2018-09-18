@@ -569,7 +569,6 @@ ErrorCode BufferPool::reservePages( const uint32_t& numPages, pageId_t* pId ) no
 }
 
 ErrorCode BufferPool::loadAllocationTable() noexcept {
-  assert(m_opened && "BufferPool is not opened");
   size_t numTotalPages = m_storage.size();
   size_t bitsPerPage = 8*m_storage.getPageSize();
   size_t numBitmapPages = numTotalPages/bitsPerPage + (numTotalPages%bitsPerPage != 0);
