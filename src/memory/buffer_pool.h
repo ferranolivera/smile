@@ -106,7 +106,7 @@ struct BufferPoolStatistics {
     uint64_t    m_pageSize;
 };
 
-class BufferPool {
+class BufferPool final {
 
   public:
     SMILE_NOT_COPYABLE(BufferPool);
@@ -115,7 +115,7 @@ class BufferPool {
 
     BufferPool() noexcept;
 
-    ~BufferPool() noexcept = default;
+    ~BufferPool() noexcept;
 
     /**
      * Opens the Buffer Pool with a file storage at the given path.
@@ -123,7 +123,8 @@ class BufferPool {
      * @param in the path to the storage.
      * @return false if the storage was opened correctly.
      **/
-    ErrorCode open( const BufferPoolConfig& bpConfig, const std::string& path );
+    ErrorCode open( const BufferPoolConfig& bpConfig, 
+                    const std::string& path ) noexcept;
 
     /**
      * Opens the Buffer Pool with a file storage at the given path.
@@ -131,7 +132,10 @@ class BufferPool {
      * @param in the path to the storage to create.
      * @return in the configuration of the storage.
      **/
-    ErrorCode create( const BufferPoolConfig& bpConfig, const std::string& path, const FileStorageConfig& fsConfig, const bool& overwrite = false );
+    ErrorCode create( const BufferPoolConfig& bpConfig, 
+                      const std::string& path, 
+                      const FileStorageConfig& fsConfig, 
+                      const bool& overwrite = false ) noexcept;
 
     /**
      * Closes the Buffer Pool.
@@ -163,7 +167,9 @@ class BufferPool {
      * @param bufferHandler BufferHandler for the pinned page.
      * @return false if the pin was successful, true otherwise.
      */
-    ErrorCode pin( const pageId_t& pId, BufferHandler* bufferHandler, bool enablePrefetch = true ) noexcept;
+    ErrorCode pin( const pageId_t& pId, 
+                   BufferHandler* bufferHandler, 
+                   bool enablePrefetch = true ) noexcept;
 
     /**
      * Unpins a page.
@@ -200,7 +206,7 @@ class BufferPool {
      * 
      * @return false if Buffer Pool is in a consistent state, true ottherwise.
      */
-    ErrorCode checkConsistency();
+    ErrorCode checkConsistency() noexcept;
 
     /**
      * Dump of the allocation table to be used with debugging purposes.
@@ -219,7 +225,7 @@ class BufferPool {
 
   private:
 
-    ErrorCode allocatePartitions();
+    ErrorCode allocatePartitions() noexcept;
 
     /**
      * Returns the bufferId_t of an empty buffer pool slot. In case none is free
@@ -229,7 +235,8 @@ class BufferPool {
      * @param partition Buffer pool partition where to search for an empty slot.
      * @return false if all pages are pinned, true otherwise.
      */
-    ErrorCode getEmptySlot( bufferId_t* bId, uint32_t partition );
+    ErrorCode getEmptySlot( bufferId_t* bId, 
+                            uint32_t partition ) noexcept;
 
     /**
      * Returns the pageId_t of an empty page. A boolean is returned indicating
@@ -247,7 +254,8 @@ class BufferPool {
      * @param pageId The first reserved pageId
      * @return false if there was an error, true otherwise
      */
-    ErrorCode reservePages( const uint32_t& numPages, pageId_t* pId ) noexcept;
+    ErrorCode reservePages( const uint32_t& numPages, 
+                            pageId_t* pId ) noexcept;
 
     /**
      * Loads the allocation table from disk.
@@ -261,7 +269,7 @@ class BufferPool {
      * 
      * @return false if the table is stored without issues, true otherwise.
      */
-    ErrorCode storeAllocationTable();
+    ErrorCode storeAllocationTable() noexcept;
 
 
     /**
@@ -326,8 +334,21 @@ class BufferPool {
      */
     uint16_t m_currentThread;    
 
+    /**
+     * Sotres the number of numa nodes
+     */
     uint32_t m_numaNodes;
+
+    /**
+     * Data buffers per numa node
+     */
     char**   p_buffersData;
+
+    /**
+     * Flag set for opened buffer pools
+     */
+
+    bool m_opened;
 };
 
 SMILE_NS_END
