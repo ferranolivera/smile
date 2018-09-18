@@ -10,6 +10,8 @@
 namespace lockfree = boost::lockfree;
 SMILE_NS_BEGIN
 
+struct TaskContext;
+
 /**
  * @brief Class use to store the different tasks that threads in the thread pool
  * can consume and process. The task pool has different independent queues.

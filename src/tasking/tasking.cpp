@@ -2,15 +2,51 @@
 #include "sync_counter.h"
 #include "task_pool.h"
 #include "tasking.h"
+
 #include <atomic>
+#include <boost/context/continuation.hpp>
 #include <chrono>
+#include <iostream>
 #include <queue>
 #include <thread>
 
-#include <iostream>
-
+namespace ctx = boost::context;
+using ExecutionContext = ctx::continuation;
 
 SMILE_NS_BEGIN
+
+/**
+ * @brief  Structure used to represent a task to be executed by the thread pool
+ */
+struct TaskContext {
+
+  /**
+   * @brief Task encapsulated within this task context
+   */
+  Task              m_task;
+
+  /**
+   * @brief Synchronization counter used to synchronize this task
+   */
+  SyncCounter*      p_syncCounter = nullptr;
+
+  /**
+   * @bried The execution context of this task
+   */
+  ExecutionContext  m_context;
+
+  /**
+   * @brief Whether the task is finished or not
+   */
+  bool              m_finished  = false;
+
+  /**
+   * @brief A pointer to the parent of the task in the task dependency graph
+   */
+  TaskContext*      p_parent;
+
+};  
+
 
 static bool                         m_initialized = false;
 
