@@ -13,10 +13,11 @@ BufferPool::BufferPool() noexcept {
   p_buffersData = nullptr;
 }
 
-void BufferPool::allocatePartitions() {
+ErrorCode BufferPool::allocatePartitions() {
 
-		uint32_t pageSizeKB = m_storage.getPageSize() / 1024;
-		uint32_t poolElems = m_config.m_poolSizeKB / pageSizeKB;
+		size_t pageSizeKB = m_storage.getPageSize() / 1024;
+		size_t poolElems = m_config.m_poolSizeKB / pageSizeKB;
+
 
     p_buffersData = new char*[m_numaNodes];
     size_t sizePerNode = m_config.m_poolSizeKB*1024 / m_numaNodes;
@@ -24,10 +25,13 @@ void BufferPool::allocatePartitions() {
 #ifdef NUMA
 			p_buffersData[i] = (char*) numa_alloc_onnode( sizePerNode, i);
 #else
-      p_buffersData[i] = new char[sizePerNode];
-      memset(p_buffersData[i], '0', sizePerNode);
-      assert(p_buffersData[i] != nullptr && "Unable to allocate memory buffer");
+      p_buffersData[i] = new (std::nothrow) char[sizePerNode];
 #endif
+      assert(p_buffersData[i] != nullptr && "Unable to allocate memory buffer");
+      if(p_buffersData[i] == nullptr) {
+        return ErrorCode::E_BUFPOOL_OUT_OF_MEMORY;
+      }
+      memset(p_buffersData[i], '0', sizePerNode);
     }
 
 		m_descriptors.resize(poolElems);
@@ -40,6 +44,7 @@ void BufferPool::allocatePartitions() {
       char* buffer = p_buffersData[node];
 			m_descriptors[i].p_buffer = buffer + sizeof(char)*(pageSizeKB*1024)*i/m_numaNodes;
 		}
+    return ErrorCode::E_NO_ERROR;
 }
 
 ErrorCode BufferPool::open( const BufferPoolConfig& bpConfig, const std::string& path ) {
@@ -73,7 +78,10 @@ ErrorCode BufferPool::open( const BufferPoolConfig& bpConfig, const std::string&
 
 		m_storage.open(path);
 
-    allocatePartitions();
+    ErrorCode err = allocatePartitions(); 
+    if(err != ErrorCode::E_NO_ERROR) {
+      throw err;
+    }
 
 		m_nextCSVictim = 0;
 		m_currentThread = 0;
@@ -117,7 +125,10 @@ ErrorCode BufferPool::create( const BufferPoolConfig& bpConfig, const std::strin
 
 		m_storage.create(path, fsConfig, overwrite);
 
-    allocatePartitions();
+    ErrorCode err = allocatePartitions(); 
+    if(err != ErrorCode::E_NO_ERROR) {
+      throw err;
+    }
 
 		m_nextCSVictim = 0;
 		m_currentThread = 0;

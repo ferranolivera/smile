@@ -21,7 +21,7 @@ struct BufferPoolConfig {
     /**
      * Size of the Buffer Pool in KB.
      */
-    uint32_t  m_poolSizeKB = 1024*1024;
+    size_t  m_poolSizeKB = 1024*1024;
 
     /**
      * Number of consecutive pages to prefetch. For instance: if set to 3,
@@ -209,9 +209,17 @@ class BufferPool {
      */
     ErrorCode dumpAllocTable() noexcept;
 
+    /**
+     * Returns whether a page is protected (used for storing DB state) or not.
+     * 
+     * @param pId pageId_t of the page to check.
+     * @return true if the page is protected, false otherwise.
+     */
+    bool isProtected( const pageId_t& pId ) noexcept;
+
   private:
 
-    void allocatePartitions();
+    ErrorCode allocatePartitions();
 
     /**
      * Returns the bufferId_t of an empty buffer pool slot. In case none is free
@@ -255,13 +263,6 @@ class BufferPool {
      */
     ErrorCode storeAllocationTable();
 
-    /**
-     * Returns whether a page is protected (used for storing DB state) or not.
-     * 
-     * @param pId pageId_t of the page to check.
-     * @return true if the page is protected, false otherwise.
-     */
-    bool isProtected( const pageId_t& pId ) noexcept;
 
     /**
      * Flushes dirty buffers back to disk.

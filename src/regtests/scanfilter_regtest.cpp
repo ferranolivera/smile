@@ -8,12 +8,12 @@
 SMILE_NS_BEGIN
 
 #define PAGE_SIZE_KB 64
-#define DATA_KB 1*1024*1024
+#define DATA_KB 4*1024*1024
 #define NUM_THREADS 1
 
 inline void run(BufferPool& bufferPool) {
-		uint32_t threshold = 2^32/2;
-		uint32_t counter = 0;
+		uint64_t threshold = 2^32/2;
+		uint64_t counter = 0;
     constexpr int32_t PADDING_FACTOR=16;
 		std::array<uint32_t,NUM_THREADS*PADDING_FACTOR> partialCounter;
 		const uint64_t numaNodes = numa_max_node() + 1;
@@ -50,20 +50,24 @@ inline void run(BufferPool& bufferPool) {
 			uint64_t startingPage = threadID;
 			BufferHandler bufferHandler;
 
+
 			for (uint64_t i = startingPage; i < numPages; i += numThreads) {
 				uint64_t page = i;
-				bufferPool.pin(page, &bufferHandler);
-				
-				uint32_t* buffer = reinterpret_cast<uint32_t*>(bufferHandler.m_buffer);
-				for (uint64_t byte = 0; byte < PAGE_SIZE_KB*1024; byte += 4) {
-					uint32_t number = *buffer;
-					if (number > threshold)  {
-						++partialCounter[threadID*PADDING_FACTOR];
-					}
-					++buffer;
-				}
 
-				bufferPool.unpin(bufferHandler.m_pId);
+        if(!bufferPool.isProtected(page)) {
+          bufferPool.pin(page, &bufferHandler);
+
+          uint32_t* buffer = reinterpret_cast<uint32_t*>(bufferHandler.m_buffer);
+          for (uint64_t byte = 0; byte < PAGE_SIZE_KB*1024; byte += 4) {
+            uint32_t number = *buffer;
+            if (number > threshold)  {
+              ++partialCounter[threadID*PADDING_FACTOR];
+            }
+            ++buffer;
+          }
+
+          bufferPool.unpin(bufferHandler.m_pId);
+        }
 			}
 		}
 		#pragma omp barrier
@@ -83,7 +87,7 @@ TEST(PerformanceTest, PerformanceTestScanFilter) {
 
 		BufferPool bufferPool;
 		BufferPoolConfig bpConfig;
-		bpConfig.m_poolSizeKB = 1024*1024;
+		bpConfig.m_poolSizeKB = DATA_KB;
 		bpConfig.m_prefetchingDegree = 0;
 		bpConfig.m_numberOfPartitions = 128;
 		ASSERT_TRUE(bufferPool.open(bpConfig, "./test.db") == ErrorCode::E_NO_ERROR);
