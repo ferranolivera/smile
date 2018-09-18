@@ -616,7 +616,6 @@ ErrorCode BufferPool::storeAllocationTable() noexcept {
 }
 
 bool BufferPool::isProtected( const pageId_t& pId ) noexcept {
-  assert(m_opened && "BufferPool is not opened");
   bool retval = false;
 
   size_t bitsPerPage = 8*m_storage.getPageSize();
