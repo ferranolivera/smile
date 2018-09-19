@@ -58,10 +58,16 @@ enum class ErrorCode : uint8_t {
   E_NUM_ERRORS
 };
 
+bool isError(ErrorCode err); 
+
+const char* getErrorMesg(ErrorCode err );
+
+SMILE_NS_END
+
 #undef _ERROR_KEYWORD
 #undef _MAKE_KEYWORD_ENUM
 
-SMILE_NS_END
+
 
 #endif /* ifndef _DATA_ERROR_H_ */
 #endif
