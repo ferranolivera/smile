@@ -9,6 +9,8 @@
 #include <iostream>
 #include <queue>
 #include <thread>
+#include <mutex>
+#include <condition_variable>
 
 namespace ctx = boost::context;
 using ExecutionContext = ctx::continuation;
@@ -87,6 +89,23 @@ static thread_local uint32_t        m_currentThreadId = INVALID_THREAD_ID;
  */
 static ExecutionContext*            m_threadMainContexts = nullptr;
 
+/**
+ * @brief Mutexes used for the condition variables for notifying sleeping
+ * threads that more work is ready
+ */
+static std::mutex*                  m_condVarMutexes = nullptr;
+
+
+/**
+ * @brief Condition variables sed to notify sleeping threads that more work is
+ * ready
+ */
+static std::condition_variable*     m_condVars = nullptr;
+/**
+ * @brief Boolean flag used for condition variables for notifying sleepting
+ * threads that more work is ready
+ */
+static bool*                        m_ready = nullptr;
 
 /**
  * @brief Pointer to the thread local currently running task 
@@ -100,11 +119,6 @@ static void finalizeCurrentRunningTask() {
   if(p_currentRunningTask->m_finished) {
     if(p_currentRunningTask->p_syncCounter != nullptr) {
       int32_t last = p_currentRunningTask->p_syncCounter->fetch_decrement();
-      /*if(last == 1) {
-        if(p_currentRunningTask->p_parent != nullptr) {
-          p_runningTaskPool->addTask(m_currentThreadId, p_currentRunningTask->p_parent);
-        }
-      }*/
     }
     delete p_currentRunningTask; // TODO: If a pool is used, reset the task and put it into the pool
   } else {
@@ -114,7 +128,7 @@ static void finalizeCurrentRunningTask() {
 }
 
 /**
- * @brief Start the execution to the given task. A lambda function is passed
+ * @brief Start the execution of the given task. A lambda function is passed
  * to the callcc method, which takes as input the current execution context.
  * This current execution context is stored int he m_threadMainContexts array
  * for the current thread. Then the task is executed. 
@@ -161,7 +175,12 @@ static void threadFunction(int threadId) noexcept {
     } else if ( (task = p_runningTaskPool->getNextTask(m_currentThreadId)) != nullptr) {
       resumeTask(task);
     } else {
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      // Wait until notified
+      std::unique_lock<std::mutex> lock(m_condVarMutexes[m_currentThreadId]);
+      m_ready[m_currentThreadId] = false;
+      m_condVars[m_currentThreadId].wait_for(lock,
+                                             std::chrono::milliseconds(1), 
+                                             [] { return m_ready[m_currentThreadId]; });
     }
   }
 }
@@ -176,10 +195,14 @@ void startThreadPool(std::size_t numThreads) noexcept {
     m_threadMainContexts  = new ExecutionContext[numThreads];
     m_isRunning           = new std::atomic<bool>[m_numThreads];
     p_threads             = new std::thread*[m_numThreads];
+    m_condVarMutexes      = new std::mutex[m_numThreads];
+    m_condVars            = new std::condition_variable[m_numThreads];
+    m_ready               = new bool[m_numThreads];
 
     for(std::size_t i = 0; i < m_numThreads; ++i) {
       m_isRunning[i].store(true);
       p_threads[i] = new std::thread(threadFunction, i);
+      m_ready[i] = false;
     }
   }
   m_initialized = true;
@@ -195,12 +218,24 @@ void stopThreadPool() noexcept {
       m_isRunning[i].store(false);
     }
 
+    // Notify threads to continue
+    for(std::size_t i = 0; i < m_numThreads; ++i) {
+      {
+        std::lock_guard<std::mutex> guard(m_condVarMutexes[i]);
+        m_ready[i] = true;
+      }
+      m_condVars[i].notify_all();
+    }
+
     // Waitning threads to stop
     for(std::size_t i = 0; i < m_numThreads; ++i) {
       p_threads[i]->join();
       delete p_threads[i];
     }
 
+    delete [] m_ready;
+    delete [] m_condVars;
+    delete [] m_condVarMutexes;
     delete [] p_threads;
     delete [] m_isRunning;
     delete [] m_threadMainContexts;
@@ -225,6 +260,12 @@ void executeTaskAsync(uint32_t queueId, Task task, SyncCounter* counter ) noexce
   }
 
   p_toStartTaskPool->addTask(queueId, taskContext);
+
+  {
+    std::lock_guard<std::mutex> guard(m_condVarMutexes[queueId]);
+    m_ready[queueId] = true;
+  }
+  m_condVars[queueId].notify_all();
 } 
 
 void executeTaskSync(uint32_t queueId, 
