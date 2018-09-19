@@ -14,7 +14,7 @@ TEST(PerformanceTest, PerformanceTestScan) {
 	startThreadPool(1);
 	BufferPool bufferPool;
 	BufferPoolConfig bpConfig;
-	bpConfig.m_poolSizeKB = DATA_KB;
+	bpConfig.m_poolSizeKB = 1024*1024;
 	bpConfig.m_prefetchingDegree = 1;
 	bpConfig.m_numberOfPartitions = 128;
 	ASSERT_TRUE(bufferPool.create(bpConfig, "./test.db", FileStorageConfig{PAGE_SIZE_KB}, true) == ErrorCode::E_NO_ERROR);

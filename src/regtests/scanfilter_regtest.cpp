@@ -22,28 +22,6 @@ inline void run(BufferPool& bufferPool) {
 		// Scan Filter operation
 		#pragma omp parallel num_threads(NUM_THREADS)
 		{
-			/*uint64_t threadID = omp_get_thread_num();
-			uint64_t numThreads = omp_get_num_threads();
-			uint64_t KBRangePerThread = DATA_KB/(numThreads/numaNodes);
-			uint64_t startingKB = KBRangePerThread*(threadID/numaNodes) + PAGE_SIZE_KB*(threadID%numaNodes);
-			BufferHandler bufferHandler;
-
-			for (uint64_t i = startingKB; i < KBRangePerThread + startingKB; i += PAGE_SIZE_KB * numaNodes) {
-				uint64_t page = 1 + (i/PAGE_SIZE_KB)/(PAGE_SIZE_KB*1024) + (i/PAGE_SIZE_KB);
-				bufferPool.pin(page, &bufferHandler);
-				
-				uint32_t* buffer = reinterpret_cast<uint32_t*>(bufferHandler.m_buffer);
-				for (uint64_t byte = 0; byte < PAGE_SIZE_KB*1024; byte += 4) {
-					uint32_t number = *buffer;
-					if (number > threshold)  {
-						++partialCounter[threadID*PADDING_FACTOR];
-					}
-					++buffer;
-				}
-
-				bufferPool.unpin(bufferHandler.m_pId);
-			}*/
-
 			uint64_t threadID = omp_get_thread_num();
 			uint64_t numThreads = omp_get_num_threads();
 			uint64_t numPages = DATA_KB / PAGE_SIZE_KB;
@@ -87,7 +65,7 @@ TEST(PerformanceTest, PerformanceTestScanFilter) {
 
 		BufferPool bufferPool;
 		BufferPoolConfig bpConfig;
-		bpConfig.m_poolSizeKB = DATA_KB;
+		bpConfig.m_poolSizeKB = 1024*1024;
 		bpConfig.m_prefetchingDegree = 0;
 		bpConfig.m_numberOfPartitions = 128;
 		ASSERT_TRUE(bufferPool.open(bpConfig, "./test.db") == ErrorCode::E_NO_ERROR);
