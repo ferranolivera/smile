@@ -3,8 +3,7 @@
 #ifndef _SMILE_DATA_SCHEMA_H_
 #define _SMILE_DATA_SCHEMA_H_ value
 
-#include "../base/error.h"
-#include "../base/platform.h"
+#include "../base/base.h"
 #include "../storage/types.h"
 #include <map>
 #include <list>
