@@ -5,10 +5,9 @@
 
 SMILE_NS_BEGIN
 
-
 FileStorage::FileStorage() noexcept : 
-  m_flags( std::ios_base::in | std::ios_base::out | std::ios_base::binary  ),
-  m_opened(false)
+m_flags( std::ios_base::in | std::ios_base::out | std::ios_base::binary  ),
+m_opened(false)
 {
 }
 
@@ -40,11 +39,11 @@ ErrorCode FileStorage::open( const std::string& path ) noexcept {
   // Read FileStorageConfig from the first page of m_configFile
   m_configFile.seekg(0,std::ios_base::beg);
   m_configFile.read(reinterpret_cast<char*>(&m_config), sizeof(m_config));
-  
+
   m_pageFiller.resize(getPageSize(),'\0');
   m_dataFile.seekg(0,std::ios_base::end);
   m_size = bytesToPage(m_dataFile.tellg());
-  
+
   m_opened = true;
   return ErrorCode::E_NO_ERROR;
 }
@@ -71,7 +70,7 @@ ErrorCode FileStorage::create( const std::string& path,
   m_config = config;
   m_pageFiller.resize(getPageSize(),'\0');
   m_size = bytesToPage(m_dataFile.tellg());
-  
+
   // Reserve space in m_configFile
   m_configFile.seekp(0,std::ios_base::beg);
   m_configFile.write(m_pageFiller.data(), m_pageFiller.size());
@@ -170,7 +169,7 @@ size_t FileStorage::getPageSize() const noexcept {
   return m_config.m_pageSizeKB*1024;
 }
 
-pageId_t FileStorage::bytesToPage( const uint64_t& bytes ) const noexcept {
+pageId_t FileStorage::bytesToPage( const size_t& bytes ) const noexcept {
   return bytes / getPageSize();
 }
 

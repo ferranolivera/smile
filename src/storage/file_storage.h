@@ -14,13 +14,13 @@ struct FileStorageConfig {
   uint32_t  m_pageSizeKB = 64;
 };
 
-class FileStorage {
+class FileStorage final {
   public:
     SMILE_NOT_COPYABLE(FileStorage)
 
     FileStorage() noexcept;
 
-    virtual ~FileStorage() noexcept;
+    ~FileStorage() noexcept;
 
     /**
      * Opens the file storage at the given path
@@ -98,14 +98,14 @@ class FileStorage {
      * @param bytes in bytes The bytes to convert
      * @return The pageId
      **/
-    pageId_t bytesToPage( const uint64_t& bytes ) const noexcept;
+    pageId_t bytesToPage( const size_t& bytes ) const noexcept;
 
     /**
      * Converts a page to its equivalent position in bytes
      * @param in pageId The page to convert
      * @return the position in bytes equivalent to the page.
      */
-    uint64_t pageToBytes( const pageId_t& pageId ) const noexcept;
+    size_t pageToBytes( const pageId_t& pageId ) const noexcept;
 
 
     // The data file
