@@ -4,7 +4,7 @@
 #ifndef _MEMORY_BUFFER_POOL_H_
 #define _MEMORY_BUFFER_POOL_H_
 
-#include <map>
+#include <unordered_map>
 #include <list>
 #include <queue>
 #include <mutex>
@@ -313,7 +313,7 @@ class BufferPool final {
         /**
          * Maps pageId_t with its bufferId_t in case it is currently in the Buffer Pool. 
          */
-        std::map<pageId_t, bufferId_t> m_bufferToPageMap;
+        std::unordered_map<pageId_t, bufferId_t> m_bufferToPageMap;
 
         /**
          * Partition lock to isolate concurrent operations by different threads.
