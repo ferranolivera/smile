@@ -44,7 +44,7 @@ inline void run(BufferPool& bufferPool) {
             ++buffer;
           }
 
-          bufferPool.unpin(bufferHandler.m_pId);
+          bufferPool.unpin(bufferHandler);
         }
 			}
 		}

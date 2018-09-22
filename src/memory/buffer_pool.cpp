@@ -348,22 +348,14 @@ ErrorCode BufferPool::pin( const pageId_t& pId,
   return ErrorCode::E_NO_ERROR;
 }
 
-ErrorCode BufferPool::unpin( const pageId_t& pId ) noexcept {
+ErrorCode BufferPool::unpin( const BufferHandler& handler ) noexcept {
   assert(m_opened && "BufferPool is not opened");
-  assert(pId <= m_storage.size() && "Page not allocated");
-  assert(!isProtected(pId) && "Unable to access protected page");
-
-  // Take the lock of the partition
-  uint32_t part = pId % m_config.m_numberOfPartitions;
-  std::unique_lock<std::mutex> partitionGuard(*m_partitions[part].p_lock);
-
-  // Decrement page's reference count.
-  auto it = m_partitions[part].m_bufferToPageMap.find(pId);
-  assert(it != m_partitions[part].m_bufferToPageMap.end() && "Page not present");
-  bufferId_t bId = it->second;
-  partitionGuard.unlock();
-  std::unique_lock<std::shared_timed_mutex> contentGuard(*m_descriptors[bId].m_contentLock);
-  --m_descriptors[bId].m_referenceCount;	
+  assert(handler.m_pId <= m_storage.size() && "Page not allocated");
+  assert(!isProtected(handler.m_pId) && "Unable to access protected page");
+  
+  // Decrement page's reference count.  
+  std::unique_lock<std::shared_timed_mutex> contentGuard(*m_descriptors[handler.m_bId].m_contentLock);
+  --m_descriptors[handler.m_bId].m_referenceCount;	
 
   return ErrorCode::E_NO_ERROR;
 }

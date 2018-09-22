@@ -29,7 +29,7 @@ TEST(PerformanceTest, PerformanceTestScan) {
 			if ( page%(PAGE_SIZE_KB*1024*8) == 0 ) ++page;
 			ASSERT_TRUE(bufferPool.pin(page, &bufferHandler) == ErrorCode::E_NO_ERROR);
 			memcpy(&dummy[0], bufferHandler.m_buffer, PAGE_SIZE_KB*1024);
-			ASSERT_TRUE(bufferPool.unpin(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR);
+			ASSERT_TRUE(bufferPool.unpin(bufferHandler) == ErrorCode::E_NO_ERROR);
 			++page;
 		}
 

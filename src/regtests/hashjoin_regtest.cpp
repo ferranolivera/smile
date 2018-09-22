@@ -54,7 +54,7 @@ TEST(PerformanceTest, PerformanceTestHashJoin) {
 					}
 				}
 
-				bufferPool.unpin(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR;
+				bufferPool.unpin(bufferHandler) == ErrorCode::E_NO_ERROR;
 			}
 		}
 
@@ -98,7 +98,7 @@ TEST(PerformanceTest, PerformanceTestHashJoin) {
 					}
 				}
 
-				bufferPool.unpin(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR;
+				bufferPool.unpin(bufferHandler) == ErrorCode::E_NO_ERROR;
 			}
 		}
 

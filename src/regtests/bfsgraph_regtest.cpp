@@ -78,12 +78,12 @@ TEST(PerformanceTest, PerformanceTestBFSGraph) {
 							found = true;
 							numNeighbors = nextfirstNbr[nextPosition] - currentFirstNbr;
 						}
-						ASSERT_TRUE(bufferPool.unpin(nextHandler.m_pId) == ErrorCode::E_NO_ERROR);
+						ASSERT_TRUE(bufferPool.unpin(nextHandler) == ErrorCode::E_NO_ERROR);
 						++nextNode;
 					}
 				}
 
-				ASSERT_TRUE(bufferPool.unpin(handler.m_pId) == ErrorCode::E_NO_ERROR);
+				ASSERT_TRUE(bufferPool.unpin(handler) == ErrorCode::E_NO_ERROR);
 
 				// Queue not visited neighbors
 				for (uint32_t i = 0; i < numNeighbors; ++i) {
@@ -98,7 +98,7 @@ TEST(PerformanceTest, PerformanceTestBFSGraph) {
 						q.push(neighbor);
 					}
 
-					ASSERT_TRUE(bufferPool.unpin(handler.m_pId) == ErrorCode::E_NO_ERROR);
+					ASSERT_TRUE(bufferPool.unpin(handler) == ErrorCode::E_NO_ERROR);
 					++currentFirstNbr;
 				}
 			}		

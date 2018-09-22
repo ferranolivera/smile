@@ -87,7 +87,7 @@ TEST(PerformanceTest, PerformanceTestLoadGraph) {
 			ASSERT_TRUE(bufferPool.setPageDirty(dataHandler.m_pId) == ErrorCode::E_NO_ERROR);
 			memcpy(dataHandler.m_buffer, &firstNbr[i], std::min(PAGE_SIZE_KB*1024, remainingBytes));
 			remainingBytes -= PAGE_SIZE_KB*1024;
-			ASSERT_TRUE(bufferPool.unpin(dataHandler.m_pId) == ErrorCode::E_NO_ERROR);
+			ASSERT_TRUE(bufferPool.unpin(dataHandler) == ErrorCode::E_NO_ERROR);
 			if (i == 0) {
 				buffer[2] = dataHandler.m_pId;
 			}
@@ -100,7 +100,7 @@ TEST(PerformanceTest, PerformanceTestLoadGraph) {
 			ASSERT_TRUE(bufferPool.setPageDirty(dataHandler.m_pId) == ErrorCode::E_NO_ERROR);
 			memcpy(dataHandler.m_buffer, &Nbr[i], std::min(PAGE_SIZE_KB*1024, remainingBytes));
 			remainingBytes -= PAGE_SIZE_KB*1024;
-			ASSERT_TRUE(bufferPool.unpin(dataHandler.m_pId) == ErrorCode::E_NO_ERROR);
+			ASSERT_TRUE(bufferPool.unpin(dataHandler) == ErrorCode::E_NO_ERROR);
 			if (i == 0) {
 				buffer[3] = dataHandler.m_pId;
 			}
@@ -109,7 +109,7 @@ TEST(PerformanceTest, PerformanceTestLoadGraph) {
 		buffer[4] = firstEdgeNode;
 		buffer[5] = lastEdgeNode;
 
-		ASSERT_TRUE(bufferPool.unpin(metaDataHandler.m_pId) == ErrorCode::E_NO_ERROR);
+		ASSERT_TRUE(bufferPool.unpin(metaDataHandler) == ErrorCode::E_NO_ERROR);
 		ASSERT_TRUE(bufferPool.close() == ErrorCode::E_NO_ERROR);
 
 		delete firstNbr;
@@ -202,7 +202,7 @@ TEST(PerformanceTest, PerformanceTestCheckGraph) {
 			ASSERT_TRUE(bufferPool.pin(firstNbrPage+(i/elemsPerPage), &bufferHandler) == ErrorCode::E_NO_ERROR);
 			memcpy(&dbFirstNbr[i], bufferHandler.m_buffer, std::min(PAGE_SIZE_KB*1024, remainingBytes));
 			remainingBytes -= PAGE_SIZE_KB*1024;
-			ASSERT_TRUE(bufferPool.unpin(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR);
+			ASSERT_TRUE(bufferPool.unpin(bufferHandler) == ErrorCode::E_NO_ERROR);
 		}
 
 		remainingBytes = fileNumEdges*sizeof(uint32_t);
@@ -210,7 +210,7 @@ TEST(PerformanceTest, PerformanceTestCheckGraph) {
 			ASSERT_TRUE(bufferPool.pin(NbrPage+(i/elemsPerPage), &bufferHandler) == ErrorCode::E_NO_ERROR);
 			memcpy(&dbNbr[i], bufferHandler.m_buffer, std::min(PAGE_SIZE_KB*1024, remainingBytes));
 			remainingBytes -= PAGE_SIZE_KB*1024;
-			ASSERT_TRUE(bufferPool.unpin(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR);
+			ASSERT_TRUE(bufferPool.unpin(bufferHandler) == ErrorCode::E_NO_ERROR);
 		}
 
 		// Check firstNbr and Nbr

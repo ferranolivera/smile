@@ -60,7 +60,7 @@ ErrorCode Schema::loadSchema() noexcept {
         }
       };
     }
-    p_bufferPool->unpin(nextPage);
+    p_bufferPool->unpin(handler);
     nextPage = header.m_nextPage;
   } while(nextPage != INVALID_PAGE_ID);
 
@@ -119,12 +119,12 @@ ErrorCode Schema::persistSchema() noexcept {
         p_bufferPool->alloc(&handler);
         currentHeader->m_nextPage = handler.m_pId;
         m_schemaPages.push_front(handler.m_pId);
-        p_bufferPool->unpin(handler.m_pId);
+        p_bufferPool->unpin(handler);
       } else {
         currentHeader->m_nextPage = m_schemaPages.front();
       }
       p_bufferPool->setPageDirty(currentPage);
-      p_bufferPool->unpin(currentPage);
+      p_bufferPool->unpin(handler);
 
       // Loading next page
       currentPage = m_schemaPages.front();
@@ -139,7 +139,7 @@ ErrorCode Schema::persistSchema() noexcept {
 
   currentHeader->m_nextPage = INVALID_PAGE_ID;
   p_bufferPool->setPageDirty(currentPage);
-  p_bufferPool->unpin(currentPage);
+  p_bufferPool->unpin(handler);
 
   return ErrorCode::E_NO_ERROR;
 

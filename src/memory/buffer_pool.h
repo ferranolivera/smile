@@ -174,10 +174,10 @@ class BufferPool final {
     /**
      * Unpins a page.
      * 
-     * @param pId Page to unpin.
+     * @param handler The buffer handler of the page to unpin.
      * @return false if the unpin was successful, true otherwise.
      */
-    ErrorCode unpin( const pageId_t& pId ) noexcept;
+    ErrorCode unpin( const BufferHandler& handler ) noexcept;
 
     /**
      * Checkpoints the BufferPool to the storage.
