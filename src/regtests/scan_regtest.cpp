@@ -15,9 +15,9 @@ TEST(PerformanceTest, PerformanceTestScan) {
 		startThreadPool(1);
 
 		BufferPool bufferPool;
-    BufferPoolConfig bpConfig;
-    bpConfig.m_poolSizeKB = 1024*1024;
-    bpConfig.m_prefetchingDegree = 1;
+		BufferPoolConfig bpConfig;
+		bpConfig.m_poolSizeKB = 1024*1024;
+		bpConfig.m_prefetchingDegree = 1;
 		ASSERT_TRUE(bufferPool.open(bpConfig, "./test.db") == ErrorCode::E_NO_ERROR);
 		BufferHandler bufferHandler;
 

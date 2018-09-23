@@ -14,7 +14,7 @@ SMILE_NS_BEGIN
 inline void run(BufferPool& bufferPool) {
 		uint64_t threshold = 2^32/2;
 		uint64_t counter = 0;
-    constexpr int32_t PADDING_FACTOR=16;
+		constexpr int32_t PADDING_FACTOR=16;
 		std::array<uint32_t,NUM_THREADS*PADDING_FACTOR> partialCounter;
 		const uint64_t numaNodes = numa_max_node() + 1;
 		//ASSERT_TRUE(NUM_THREADS >= numaNodes && NUM_THREADS % numaNodes == 0);
@@ -28,24 +28,23 @@ inline void run(BufferPool& bufferPool) {
 			uint64_t startingPage = threadID;
 			BufferHandler bufferHandler;
 
-
 			for (uint64_t i = startingPage; i < numPages; i += numThreads) {
 				uint64_t page = i;
 
-        if(!bufferPool.isProtected(page)) {
-          bufferPool.pin(page, &bufferHandler);
+				if(!bufferPool.isProtected(page)) {
+					bufferPool.pin(page, &bufferHandler);
 
-          uint32_t* buffer = reinterpret_cast<uint32_t*>(bufferHandler.m_buffer);
-          for (uint64_t byte = 0; byte < PAGE_SIZE_KB*1024; byte += 4) {
-            uint32_t number = *buffer;
-            if (number > threshold)  {
-              ++partialCounter[threadID*PADDING_FACTOR];
-            }
-            ++buffer;
-          }
+					uint32_t* buffer = reinterpret_cast<uint32_t*>(bufferHandler.m_buffer);
+					for (uint64_t byte = 0; byte < PAGE_SIZE_KB*1024; byte += 4) {
+						uint32_t number = *buffer;
+						if (number > threshold)  {
+							++partialCounter[threadID*PADDING_FACTOR];
+						}
+						++buffer;
+					}
 
-          bufferPool.unpin(bufferHandler);
-        }
+					bufferPool.unpin(bufferHandler);
+				}
 			}
 		}
 		#pragma omp barrier
@@ -70,17 +69,17 @@ TEST(PerformanceTest, PerformanceTestScanFilter) {
 		bpConfig.m_numberOfPartitions = 128;
 		ASSERT_TRUE(bufferPool.open(bpConfig, "./test.db") == ErrorCode::E_NO_ERROR);
 
-    int num_iters= 10;
-    run(bufferPool);
-    std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
-    for(int i = 0; i < num_iters; ++i) {
-      run(bufferPool);
-    }
-    std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
-    std::cout << "Execution time: " << std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count() << std::endl;
+		int num_iters= 10;
+		run(bufferPool);
+		std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+		for(int i = 0; i < num_iters; ++i) {
+			run(bufferPool);
+		}
+		std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+		std::cout << "Execution time: " << std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count() << std::endl;
 
 		stopThreadPool();
-    	bufferPool.close();
+		bufferPool.close();
 	}
 }
 

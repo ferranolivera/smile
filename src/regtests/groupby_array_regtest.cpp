@@ -39,22 +39,25 @@ TEST(PerformanceTest, PerformanceTestGroupByArray) {
 		{
 			uint64_t threadID = omp_get_thread_num();
 			uint64_t numThreads = omp_get_num_threads();
-			uint64_t KBRangePerThread = DATA_KB/(numThreads/numaNodes);
-			uint64_t startingKB = KBRangePerThread*(threadID/numaNodes) + PAGE_SIZE_KB*(threadID%numaNodes);
+			uint64_t numPages = DATA_KB / PAGE_SIZE_KB;
+			uint64_t startingPage = threadID;
 			BufferHandler bufferHandler;
 
-			for (uint64_t i = startingKB; i < KBRangePerThread + startingKB; i += PAGE_SIZE_KB * numaNodes) {
-				uint64_t page = 1 + (i/PAGE_SIZE_KB)/(PAGE_SIZE_KB*1024) + (i/PAGE_SIZE_KB);
-				bufferPool.pin(page, &bufferHandler);
-				
-				uint8_t* buffer = reinterpret_cast<uint8_t*>(bufferHandler.m_buffer);
-				for (uint64_t byte = 0; byte < PAGE_SIZE_KB*1024; ++byte) {
-					uint8_t number = *buffer;
-					occurrencesMap[threadID][number]++;
-					++buffer;
-				}
+			for (uint64_t i = startingPage; i < numPages; i += numThreads) {
+				uint64_t page = i;
 
-				bufferPool.unpin(bufferHandler);
+				if(!bufferPool.isProtected(page)) {
+					bufferPool.pin(page, &bufferHandler);
+					
+					uint8_t* buffer = reinterpret_cast<uint8_t*>(bufferHandler.m_buffer);
+					for (uint64_t byte = 0; byte < PAGE_SIZE_KB*1024; ++byte) {
+						uint8_t number = *buffer;
+						occurrencesMap[threadID][number]++;
+						++buffer;
+					}
+
+					bufferPool.unpin(bufferHandler);
+				}
 			}
 		}	
 

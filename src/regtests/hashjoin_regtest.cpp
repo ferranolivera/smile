@@ -32,29 +32,32 @@ TEST(PerformanceTest, PerformanceTestHashJoin) {
 		{
 			uint64_t threadID = omp_get_thread_num();
 			uint64_t numThreads = omp_get_num_threads();
-			uint64_t KBRangePerThread = DATA_KB/(numThreads/numaNodes);
-			uint64_t startingKB = KBRangePerThread*(threadID/numaNodes) + PAGE_SIZE_KB*(threadID%numaNodes);
+			uint64_t numPages = DATA_KB / PAGE_SIZE_KB;
+			uint64_t startingPage = threadID;
 			BufferHandler bufferHandler;
 
-			for (uint64_t i = startingKB; i < KBRangePerThread + startingKB; i += PAGE_SIZE_KB * numaNodes) {
-				uint64_t page = 1 + (i/PAGE_SIZE_KB)/(PAGE_SIZE_KB*1024) + (i/PAGE_SIZE_KB);
-				bufferPool.pin(page, &bufferHandler) == ErrorCode::E_NO_ERROR;
-				
-				uint8_t* buffer = reinterpret_cast<uint8_t*>(bufferHandler.m_buffer);
-				for (uint64_t byte = 0; byte < PAGE_SIZE_KB*1024; byte += 2) {
-					uint8_t key = *buffer;
-					uint8_t value = *(buffer+1);
-					buffer += 2;
+			for (uint64_t i = startingPage; i < numPages; i += numThreads) {
+				uint64_t page = i;
 
-					if (key%2 == 0) {
-						std::map<uint8_t, uint16_t>::iterator it = hashTable[threadID].find(key);
-						if (it == hashTable[threadID].end()) {
-							hashTable[threadID].insert(std::pair<uint8_t,uint16_t>(key,value));
+				if(!bufferPool.isProtected(page)) {
+					bufferPool.pin(page, &bufferHandler) == ErrorCode::E_NO_ERROR;
+					
+					uint8_t* buffer = reinterpret_cast<uint8_t*>(bufferHandler.m_buffer);
+					for (uint64_t byte = 0; byte < PAGE_SIZE_KB*1024; byte += 2) {
+						uint8_t key = *buffer;
+						uint8_t value = *(buffer+1);
+						buffer += 2;
+
+						if (key%2 == 0) {
+							std::map<uint8_t, uint16_t>::iterator it = hashTable[threadID].find(key);
+							if (it == hashTable[threadID].end()) {
+								hashTable[threadID].insert(std::pair<uint8_t,uint16_t>(key,value));
+							}
 						}
 					}
-				}
 
-				bufferPool.unpin(bufferHandler) == ErrorCode::E_NO_ERROR;
+					bufferPool.unpin(bufferHandler) == ErrorCode::E_NO_ERROR;
+				}
 			}
 		}
 
@@ -78,27 +81,31 @@ TEST(PerformanceTest, PerformanceTestHashJoin) {
 		{
 			uint64_t threadID = omp_get_thread_num();
 			uint64_t numThreads = omp_get_num_threads();
-			uint64_t KBPerThread = (DATA_KB-DATA_KB/16)/numThreads;
+			uint64_t numPages = DATA_KB / PAGE_SIZE_KB;
+			uint64_t startingPage = threadID;
 			BufferHandler bufferHandler;
 
-			for (uint64_t i = DATA_KB/16+threadID*KBPerThread; (i-threadID*KBPerThread) < KBPerThread; i += PAGE_SIZE_KB) {
-				uint64_t page = 1 + (i/PAGE_SIZE_KB)/(PAGE_SIZE_KB*1024) + (i/PAGE_SIZE_KB) + ((DATA_KB/16)/PAGE_SIZE_KB);
-				bufferPool.pin(page, &bufferHandler) == ErrorCode::E_NO_ERROR;
+			for (uint64_t i = startingPage; i < numPages; i += numThreads) {
+				uint64_t page = i;
 
-				uint8_t* buffer = reinterpret_cast<uint8_t*>(bufferHandler.m_buffer);
-				for (uint64_t byte = 0; byte < PAGE_SIZE_KB*1024; byte += 2) {
-					uint8_t key = *buffer;
-					uint8_t value = *(buffer+1);
-					buffer += 2;
+				if(!bufferPool.isProtected(page)) {
+					bufferPool.pin(page, &bufferHandler) == ErrorCode::E_NO_ERROR;
 
-					std::map<uint8_t, uint16_t>::iterator it = hashTable[0].find(key);
-					if (it != hashTable[0].end()) {
-						#pragma omp atomic
-						it->second += value;
+					uint8_t* buffer = reinterpret_cast<uint8_t*>(bufferHandler.m_buffer);
+					for (uint64_t byte = 0; byte < PAGE_SIZE_KB*1024; byte += 2) {
+						uint8_t key = *buffer;
+						uint8_t value = *(buffer+1);
+						buffer += 2;
+
+						std::map<uint8_t, uint16_t>::iterator it = hashTable[0].find(key);
+						if (it != hashTable[0].end()) {
+							#pragma omp atomic
+							it->second += value;
+						}
 					}
-				}
 
-				bufferPool.unpin(bufferHandler) == ErrorCode::E_NO_ERROR;
+					bufferPool.unpin(bufferHandler) == ErrorCode::E_NO_ERROR;
+				}
 			}
 		}
 
