@@ -24,16 +24,16 @@ TEST(BufferPoolTest, BufferPoolAlloc) {
 
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler1) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler1.m_bId == 0);
-  ASSERT_TRUE(bufferPool.unpin(bufferHandler1.m_pId) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(bufferPool.unpin(bufferHandler1) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler2) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler2.m_bId == 1);
-  ASSERT_TRUE(bufferPool.unpin(bufferHandler2.m_pId) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(bufferPool.unpin(bufferHandler2) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler3) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler3.m_bId == 2);
-  ASSERT_TRUE(bufferPool.unpin(bufferHandler3.m_pId) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(bufferPool.unpin(bufferHandler3) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler4) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler4.m_bId == 3);
-  ASSERT_TRUE(bufferPool.unpin(bufferHandler4.m_pId) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(bufferPool.unpin(bufferHandler4) == ErrorCode::E_NO_ERROR);
 
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler1) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler1.m_bId == 0);
@@ -41,10 +41,10 @@ TEST(BufferPoolTest, BufferPoolAlloc) {
   ASSERT_TRUE(bufferHandler2.m_bId == 1);
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler3) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler3.m_bId == 2);
-  ASSERT_TRUE(bufferPool.unpin(bufferHandler3.m_pId) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(bufferPool.unpin(bufferHandler3) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler4) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler4.m_bId == 3);
-  ASSERT_TRUE(bufferPool.unpin(bufferHandler4.m_pId) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(bufferPool.unpin(bufferHandler4) == ErrorCode::E_NO_ERROR);
 
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler1) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler1.m_bId == 2);
@@ -77,34 +77,34 @@ TEST(BufferPoolTest, BufferPoolPinAndWritePage) {
   bufferPool.setPageDirty(pId);
   char dataW[] = "I am writing data";
   memcpy(bufferHandler.m_buffer, dataW, 17);
-  ASSERT_TRUE(bufferPool.unpin(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(bufferPool.unpin(bufferHandler) == ErrorCode::E_NO_ERROR);
 
   ASSERT_TRUE(bufferPool.pin(pId, &bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler.m_pId == pId);
   ASSERT_TRUE(bufferHandler.m_bId == 0);
-  ASSERT_TRUE(bufferPool.unpin(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(bufferPool.unpin(bufferHandler) == ErrorCode::E_NO_ERROR);
 
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler.m_bId == 1);
-  ASSERT_TRUE(bufferPool.unpin(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(bufferPool.unpin(bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler.m_bId == 2);
-  ASSERT_TRUE(bufferPool.unpin(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(bufferPool.unpin(bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler.m_bId == 3);
-  ASSERT_TRUE(bufferPool.unpin(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(bufferPool.unpin(bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler.m_bId == 1);
-  ASSERT_TRUE(bufferPool.unpin(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(bufferPool.unpin(bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler.m_bId == 2);
-  ASSERT_TRUE(bufferPool.unpin(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(bufferPool.unpin(bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler.m_bId == 3);
-  ASSERT_TRUE(bufferPool.unpin(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(bufferPool.unpin(bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler.m_bId == 0);
-  ASSERT_TRUE(bufferPool.unpin(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(bufferPool.unpin(bufferHandler) == ErrorCode::E_NO_ERROR);
   
   ASSERT_TRUE(bufferPool.pin(pId, &bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler.m_bId == 1);
@@ -136,9 +136,8 @@ TEST(BufferPoolTest, BufferPoolErrors) {
 
   ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
   ASSERT_TRUE(bufferHandler.m_bId == 0);
-  pageId_t pId = bufferHandler.m_pId;
-  ASSERT_TRUE(bufferPool.unpin(pId) == ErrorCode::E_NO_ERROR);
-  ASSERT_TRUE(bufferPool.release(pId) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(bufferPool.unpin(bufferHandler) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(bufferPool.release(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR);
 
   ASSERT_TRUE(bufferPool.release(1) == ErrorCode::E_NO_ERROR);
 
@@ -184,7 +183,7 @@ TEST(BufferPoolTest, BufferPoolPersistence) {
   uint64_t pagesToAlloc = (4*1024*8)+(4*1024*4);
   for (uint64_t i = 0; i < pagesToAlloc; ++i) {
     ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
-    ASSERT_TRUE(bufferPool.unpin(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR);
+    ASSERT_TRUE(bufferPool.unpin(bufferHandler) == ErrorCode::E_NO_ERROR);
   }
 
   // Force BufferPool to flush m_allocationTable to disk.
@@ -210,28 +209,28 @@ TEST(BufferPoolTest, BufferPoolPersistence) {
  */
 struct Params {
   Params() {}
-  Params(BufferPool* bp, pageId_t pId) {
+  Params(BufferPool* bp, BufferHandler handler) {
     p_bp = bp;
-    m_pId = pId;
+    m_handler = handler;
   }
 
   BufferPool* p_bp;
-  pageId_t m_pId;
+  BufferHandler m_handler;
 };
 
 /**
  * Used by BufferPoolThreadSafe.
  */
 void release(Params* params) {
-  ASSERT_TRUE(params->p_bp->release(params->m_pId) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(params->p_bp->release(params->m_handler.m_pId) == ErrorCode::E_NO_ERROR);
 }
 
 /**
  * Used by BufferPoolThreadSafe.
  */
 void unpin(Params* params) {
-  ASSERT_TRUE(params->p_bp->setPageDirty(params->m_pId) == ErrorCode::E_NO_ERROR);
-  ASSERT_TRUE(params->p_bp->unpin(params->m_pId) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(params->p_bp->setPageDirty(params->m_handler.m_pId) == ErrorCode::E_NO_ERROR);
+  ASSERT_TRUE(params->p_bp->unpin(params->m_handler) == ErrorCode::E_NO_ERROR);
 }
 
 /**
@@ -266,7 +265,7 @@ TEST(BufferPoolTest, BufferPoolThreadSafe) {
     ASSERT_TRUE(bufferPool.alloc(&bufferHandler) == ErrorCode::E_NO_ERROR);
     ++allocatedPages;
 
-    Params aux(&bufferPool, bufferHandler.m_pId);    
+    Params aux(&bufferPool, bufferHandler);    
     params[i] = aux; 
 
     bool doRelease = ((rand()%2) == 0);

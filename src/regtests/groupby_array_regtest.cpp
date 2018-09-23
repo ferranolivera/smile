@@ -54,7 +54,7 @@ TEST(PerformanceTest, PerformanceTestGroupByArray) {
 					++buffer;
 				}
 
-				bufferPool.unpin(bufferHandler.m_pId);
+				bufferPool.unpin(bufferHandler);
 			}
 		}	
 

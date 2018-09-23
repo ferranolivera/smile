@@ -26,7 +26,7 @@ TEST(SchemaTest, SchemaPersistence) {
   header->m_nextPage = INVALID_PAGE_ID;
 
   bufferPool.setPageDirty(handler.m_pId);
-  bufferPool.unpin(handler.m_pId);
+  bufferPool.unpin(handler);
 
   Schema schema{&bufferPool};
   ASSERT_TRUE(schema.loadSchema() == ErrorCode::E_NO_ERROR);

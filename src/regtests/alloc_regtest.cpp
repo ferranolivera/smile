@@ -32,7 +32,7 @@ TEST(PerformanceTest, PerformanceTestScan) {
 			++buffer;
 		}
 
-		ASSERT_TRUE(bufferPool.unpin(bufferHandler.m_pId) == ErrorCode::E_NO_ERROR);
+		ASSERT_TRUE(bufferPool.unpin(bufferHandler) == ErrorCode::E_NO_ERROR);
 	}
 
  	stopThreadPool();
